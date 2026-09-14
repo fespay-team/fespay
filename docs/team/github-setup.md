@@ -32,7 +32,7 @@ Organization作成では名称・連絡先・所有主体などを確認し、�
 ## 無料プランでの運用
 
 2026-09-14のGitHub公式仕様では、GitHub Freeのprivateリポジトリではブランチ保護・rulesetsによる強制は利用できません。
-privateのCODEOWNERSも対応プランの確認が必要です。
+FreeのprivateではCODEOWNERS・Draft PRも利用対象外です。作業途中のPRは `[WIP]` を明示します。
 無料のまま始める場合はPR・相互レビュー・mainへの直接pushを避ける合意で運用し、強制済みと表現しません。
 保護のために勝手にpublicへ変更したり、有料プランへ切り替えたりはしません。
 
