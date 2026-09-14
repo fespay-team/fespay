@@ -4,9 +4,10 @@
 
 - ローカル：リポジトリの初期構成を準備。
 - 所有先：FesPay用Organizationを新設する方針。
-- Organization名：希望の `fespay` は既存アカウントが使用中。代替名の決定待ち。
+- Organization名：`fespay-team`（ユーザー指定）。希望の `fespay` は既存アカウントが使用中。
 - リポジトリ名：`fespay`。公開範囲はprivateを初期案とする。
-- GitHub上のOrganization・リポジトリ：未作成、push未実施。
+- GitHub上のOrganization・リポジトリ：未作成、push未実施。無料プランの登録画面まで準備済み。
+- 登録待ち：GitHubのContact emailは必須。ユーザー指定は空欄のため、使用する連絡先の指定待ち。
 - チーム、メンバー招待、CODEOWNERS、ブランチ保護、CI：未設定。
 
 ## Organizationを使う理由
