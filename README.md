@@ -1,7 +1,7 @@
 # FesPay
 
 学園祭・バザーなどのイベント内決済プラットフォーム。
-GitHub：[fespay-team/fespay](https://github.com/fespay-team/fespay)（private）。
+GitHub：[fespay-team/fespay](https://github.com/fespay-team/fespay)（public）。
 現在はチーム開発の準備段階です。アプリケーション、DB、実行環境はまだ実装していません。
 
 ## 最初に読むもの
