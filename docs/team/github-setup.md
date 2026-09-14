@@ -2,23 +2,26 @@
 
 ## 現在の状態
 
-- ローカル：リポジトリの初期構成を準備。
-- 所有先：FesPay用Organizationを新設する方針。
-- Organization名：`fespay-team`（ユーザー指定）。希望の `fespay` は既存アカウントが使用中。
-- リポジトリ名：`fespay`。公開範囲はprivateを初期案とする。
-- GitHub上のOrganization・リポジトリ：未作成、push未実施。無料プランの登録画面まで準備済み。
-- 登録待ち：連絡先はユーザー指定済み。登録画面でGitHub利用規約への同意を確認してから作成する。連絡先の実値は本書に記録しない。
-- チーム、メンバー招待、CODEOWNERS、ブランチ保護、CI：未設定。
+確認日：2026-09-14。
+
+- Organization：[fespay-team](https://github.com/fespay-team)。作成済み、GitHub Free。
+- リポジトリ：[fespay-team/fespay](https://github.com/fespay-team/fespay)。Private、既定ブランチ `main`。
+- ローカル：Gitを初期化し、`origin` を上記リポジトリに設定。文書一式をpush済み。
+- 設定：Issues有効、Wiki無効、Squash mergeのみ有効、マージ後の作業ブランチ自動削除。
+- 登録連絡先：ユーザー指定済み。実値は本書に記録しない。
+- チーム・メンバー招待：未設定。担当者のGitHubアカウントが確定したら割り当てる。
+- CODEOWNERS・ブランチ保護：Freeのprivateでは利用対象外。以下のレビュー運用を適用する。
+- CI：未導入。今回はドキュメントとリポジトリの準備まで。
 
 ## Organizationを使う理由
 
 個人から独立した所有先を用意し、メンバーの参加・離脱とチーム単位の権限を管理します。
-無料のGitHub Freeを初期候補とし、有料プランは自動契約しません。
+現在はGitHub Freeを利用しています。有料プランへの変更は未実施です。
 Organization作成では名称・連絡先・所有主体などを確認し、登録画面で設定します。
 
-## 設定案
+## 設定・運用方針
 
-| 項目 | 設定案 |
+| 項目 | 設定・方針 |
 | --- | --- |
 | 所有者 | まず作成者。引継ぎ用の2人目はメンバー確定後に選定 |
 | Repository visibility | Private |
@@ -28,7 +31,7 @@ Organization作成では名称・連絡先・所有主体などを確認し、�
 | レビュー | 作者以外の最低1人。金銭・認証認可は別のBE担当 |
 | Issues | 有効。テンプレートを利用 |
 | Wiki | 無効。文書の正本は `docs/` |
-| Projects | Backlog / Ready / In progress / In review / Done |
+| Projects | 未作成。Backlog / Ready / In progress / In review / Doneを推奨 |
 
 ## 無料プランでの運用
 
@@ -45,12 +48,12 @@ FreeのprivateではCODEOWNERS・Draft PRも利用対象外です。作業途中
 
 ## 初期公開後に確認すること
 
-- [ ] 作成先、private、default branchが正しい
-- [ ] ローカルとリモートのコミットが一致する
+- [x] 作成先、private、default branchが正しい
+- [x] 初期文書一式をpushし、リモートのmainへの反映を確認した
 - [ ] チームと実メンバーに適切な権限がある
 - [ ] 新しい参加者がcloneして要件・設計文書を読める
-- [ ] IssueとPRのテンプレートが表示される
-- [ ] プランで利用できる保護機能を確認し、有効・未設定を記録した
+- [x] IssueとPRのテンプレートをリモートのmainに配置した
+- [x] プランで利用できる保護機能を確認し、有効・未設定を記録した
 
 ## 公式資料
 
