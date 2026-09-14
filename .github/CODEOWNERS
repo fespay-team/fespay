@@ -1,6 +1,6 @@
 # Repository ownership
-# Public users can propose changes, but only a repository administrator can
-# approve and merge changes to protected branches.
+# Public users can propose changes, but only users with repository write
+# permissions can merge changes after the required review.
 * @natuki53
 
 # Protect the ownership and collaboration settings themselves.
