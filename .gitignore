@@ -1,0 +1,31 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+secrets/
+
+# Future application outputs
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Temporary local artifacts
+.tmp/
+.cache/
