@@ -7,7 +7,7 @@
 - Organization名：`fespay-team`（ユーザー指定）。希望の `fespay` は既存アカウントが使用中。
 - リポジトリ名：`fespay`。公開範囲はprivateを初期案とする。
 - GitHub上のOrganization・リポジトリ：未作成、push未実施。無料プランの登録画面まで準備済み。
-- 登録待ち：GitHubのContact emailは必須。ユーザー指定は空欄のため、使用する連絡先の指定待ち。
+- 登録待ち：連絡先はユーザー指定済み。登録画面でGitHub利用規約への同意を確認してから作成する。連絡先の実値は本書に記録しない。
 - チーム、メンバー招待、CODEOWNERS、ブランチ保護、CI：未設定。
 
 ## Organizationを使う理由
