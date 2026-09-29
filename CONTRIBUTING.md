@@ -27,7 +27,7 @@ API契約の変更は利用するFEと提供するBEが影響を確認します�
 
 ## 文書を変更するとき
 
-- [受領原本](docs/requirements/event_payment_requirements_integrated_v0.1.md)は保存し、直接書き換えない。設計・実装・試験は[現行要件書](docs/requirements/event_payment_requirements.md)を参照する。
+- 設計・実装・試験は[現行要件書](docs/requirements/event_payment_requirements.md)を参照する。受領時点と過去版はGit履歴から再現し、作業ツリーに全文コピーを保持しない。
 - 要件変更は[変更記録](docs/requirements/changes.md)で提案・レビューし、承認前に現行要件書へ反映しない。承認時は現行要件書の本文・版情報と決定者・決定日を同じPRで更新する。
 - 通常の変更履歴はGitのcommit・PRで管理し、改訂ごとの全文コピーは作らない。特定時点の文書固定が必要な場合だけ[改訂ルール](docs/requirements/README.md)に従ってスナップショットを作る。
 - 設計書には関連要件ID、状態、担当、レビュー者、更新日を記入する。
