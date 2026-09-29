@@ -13,7 +13,7 @@
 
 ## 名前の付け方
 
-- ブランチ例：`docs/12-payment-flow`、`feat/34-charge`、`fix/56-refund-race`。
+- ブランチ例：`feature/34-charge`、`fix/56-refund-race`、`refactor/payment-service`、`docs/12-payment-flow`。
 - コミット例：`docs: 決済フローの設計書を追加`。
 - 1つのPRは1つの目的に絞り、無関係な変更を混ぜない。
 - IssueやPRに存在しない担当者名・要件ID・試験結果を書かない。未決は未決とする。

@@ -1,8 +1,6 @@
-# Repository ownership
-# Public users can propose changes, but only users with repository write
-# permissions can merge changes after the required review.
-* @natuki53
+# Application and documentation changes can be reviewed by the developers team.
+* @fespay-team/developers
 
-# Protect the ownership and collaboration settings themselves.
+# Keep ownership and requirement-governance changes with the repository owner.
 /.github/ @natuki53
 /docs/requirements/ @natuki53
