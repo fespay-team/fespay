@@ -1,7 +1,7 @@
 # 工程・公開判定・発表
 
-工程の基準は[要件原本の第32章](../requirements/event_payment_requirements_integrated_v0.1.md)です。
-2027-01-20の期限を含め、原本の工程は達成保証・工数見積もりではありません。
+工程の基準は[現行要件書の第32章](../requirements/event_payment_requirements.md)です。
+2027-01-20の期限を含め、当初の工程記載は[受領原本](../requirements/event_payment_requirements_integrated_v0.1.md)から引き継いだもので、達成保証・工数見積もりではありません。
 日々のタスクはGitHub Issues、予定と担当はGitHub Projectsを使う運用案です。ボードは未作成です。
 
 推奨するボードの状態：Backlog → Ready → In progress → In review → Done。
@@ -11,7 +11,7 @@ Issueには担当ロールだけでなく実際の担当者、依存Issue、完�
 
 ## 公開前ゲート
 
-以下は原本第33章の確認項目への索引です。詳細条件は原本を参照してください。
+以下は現行要件書第33章の確認項目への索引です。詳細条件は現行要件書を参照してください。
 
 | ID | 項目 | 状態 | 証跡・判定者・判定日 |
 | --- | --- | --- | --- |

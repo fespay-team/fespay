@@ -1,8 +1,8 @@
 # 受入試験の管理表
 
-現行対象：EPP-REQ-001 v0.1、付録A。これは進捗表です。合格条件は[要件原本](../requirements/event_payment_requirements_integrated_v0.1.md)を参照してください。
-CR-0001のレビュー中は、AT-031、AT-032、AT-039、AT-050について[v0.2レビュー案](../requirements/event_payment_requirements_integrated_v0.2.md)の条件も併記して確認する。承認前のため現行版はv0.1のままとする。
-要件ID欄の `/` による省略表記は原本の表記を保持しています。
+現行対象：EPP-REQ-001 v0.1、付録A。これは進捗表です。合格条件は[現行要件書](../requirements/event_payment_requirements.md)を参照してください。
+CR-0001のレビュー中は、AT-031、AT-032、AT-039、AT-050への提案影響を[要件変更記録](../requirements/changes.md)で併記して確認する。承認前のため現行要件書には反映しない。
+要件ID欄の `/` による省略表記は現行要件書付録Aの表記を保持しています。
 
 初期状態は全70件が未実施。担当、設計書、Issue、試験報告を作業時に追加します。
 

@@ -20,7 +20,7 @@ fespay/
 ├── CONTRIBUTING.md
 ├── .github/                # Issue・PRテンプレート、レビュー担当設定例
 ├── docs/
-│   ├── requirements/       # 要件定義書の原本・現行版の案内・変更記録
+│   ├── requirements/       # 現行要件書・受領原本・変更記録
 │   ├── design/             # アーキテクチャ・DB・API・UI・業務フローの設計
 │   ├── adr/                # 技術・構成に関する意思決定記録
 │   ├── testing/            # 受入試験の進捗・試験報告
@@ -38,7 +38,7 @@ fespay/
 
 ## 現在の状態
 
-- 要件定義書 EPP-REQ-001 v0.1 を内容変更なしで取り込み済み。
+- [受領原本 EPP-REQ-001 v0.1](docs/requirements/event_payment_requirements_integrated_v0.1.md)を内容変更なしで保存し、同一内容から[安定パスの現行要件書](docs/requirements/event_payment_requirements.md)を作成済み。
 - 設計書の置き場所とひな形、70件の受入試験の管理表を準備済み。
 - 設計・実装・受入試験は未完了。試験管理表の初期状態はすべて「未実施」。
 - GitHub Organization とリモートリポジトリの設定状況は[設定記録](docs/team/github-setup.md)を参照。

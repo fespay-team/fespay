@@ -6,5 +6,5 @@
 - `ledger.md`：残高・台帳・拘束・返金専用額と不変条件。
 - `physical-schema.md`：型、索引、制約、マイグレーションとの対応。
 
-要件原本の関連箇所：第10・14・16～19・23・24章。
+[現行要件書](../../requirements/event_payment_requirements.md)の関連箇所：第10・14・16～19・23・24章。
 [設計書テンプレート](../../templates/design.md)を使用し、要件IDと受入試験IDを明記してください。

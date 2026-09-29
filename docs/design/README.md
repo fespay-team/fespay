@@ -1,7 +1,7 @@
 # 設計書
 
 現時点では設計書本文は未作成です。下記の配置に沿って[設計書テンプレート](../templates/design.md)から作成します。
-要件の制約は[要件原本](../requirements/event_payment_requirements_integrated_v0.1.md)を参照してください。
+要件の制約は[現行要件書](../requirements/event_payment_requirements.md)を参照してください。
 
 | 領域 | 入口 | 主担当の目安 |
 | --- | --- | --- |
