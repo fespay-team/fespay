@@ -5,5 +5,5 @@
 - `overview.md`：構成図と責務、信頼境界、環境分離。
 - `modules.md`：モジュール依存、DBトランザクション境界、通知の扱い。
 
-要件原本の関連箇所：第14・23・24・30・31章。
+[現行要件書](../../requirements/event_payment_requirements.md)の関連箇所：第14・23・24・30・31章。
 [設計書テンプレート](../../templates/design.md)を使用し、要件IDと受入試験IDを明記してください。

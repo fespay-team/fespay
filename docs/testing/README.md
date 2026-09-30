@@ -1,7 +1,7 @@
 # 試験資料
 
 [受入試験の管理表](acceptance-status.md)にAT-001～AT-070を登録しています。すべて未実施です。
-操作条件・合格条件の正本は[要件原本の付録A](../requirements/event_payment_requirements_integrated_v0.1.md)です。
+操作条件・合格条件の正本は[現行要件書の付録A](../requirements/event_payment_requirements.md)です。
 
 実行後は[試験報告テンプレート](../templates/test-report.md)を使い、
 `reports/YYYY-MM-DD-topic.md` に実行条件・対象コミット・実際の結果を記録してください。

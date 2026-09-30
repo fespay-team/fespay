@@ -6,5 +6,5 @@
 - `conventions.md`：認証・認可、金額の文字列表現、冪等性、エラー、ページング、時刻。
 - `events.md`：SSEイベント、再接続、正本の再取得。
 
-要件原本の関連箇所：第03～06・14・22・26章。
+[現行要件書](../../requirements/event_payment_requirements.md)の関連箇所：第03～06・14・22・26章。
 [設計書テンプレート](../../templates/design.md)を使用し、要件IDと受入試験IDを明記してください。

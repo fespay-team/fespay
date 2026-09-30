@@ -8,5 +8,5 @@
 - `management.md`：主催者・店舗管理画面。
 - `interaction-states.md`：確認・処理中・結果不明・失敗・復帰、アクセシビリティ。
 
-要件原本の関連箇所：第12・13・20・21・26章。
+[現行要件書](../../requirements/event_payment_requirements.md)の関連箇所：第12・13・20・21・26章。
 [設計書テンプレート](../../templates/design.md)を使用し、要件IDと受入試験IDを明記してください。

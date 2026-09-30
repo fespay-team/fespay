@@ -8,5 +8,5 @@
 - `stock-orders.md`：在庫予約・注文・受渡し・競合。
 - `authorization.md`：招待・権限解除・管理者交代。
 
-要件原本の関連箇所：第03～19章。
+[現行要件書](../../requirements/event_payment_requirements.md)の関連箇所：第03～19章。
 [設計書テンプレート](../../templates/design.md)を使用し、要件IDと受入試験IDを明記してください。
