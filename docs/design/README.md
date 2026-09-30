@@ -1,6 +1,6 @@
 # 設計書
 
-[基本設計書](basic-design.md)をEPP-DES-001の本文としてレビュー中です。基準は[安定パスの現行要件書](../requirements/event_payment_requirements.md)です。QR期限等は[要件変更記録のCR-0001](../requirements/changes.md)としてレビュー中であり、承認前のため現行要件書の確定仕様としては扱いません。
+[基本設計書](basic-design.md)をEPP-DES-001の本文としてレビュー中です。基準は[安定パスの現行要件書](../requirements/event_payment_requirements.md)です。[CR-0001](../requirements/changes.md)で承認されたQR表示・関連付け後承認・見積・在庫予約の期限と安全な再試行条件を反映しています。
 
 | 領域 | 入口 | 主担当の目安 |
 | --- | --- | --- |
