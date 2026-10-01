@@ -2,7 +2,7 @@
 
 | 場所 | 内容 | 現在の状態 |
 | --- | --- | --- |
-| [requirements](requirements/README.md) | 現行要件書・変更記録 | 現行v0.1、CR-0001レビュー中 |
+| [requirements](requirements/README.md) | 現行要件書・変更記録 | 現行v0.2、CR-0001承認済み |
 | [design](design/README.md) | アーキテクチャ・DB・API・UI・業務フロー | 基本設計レビュー中、詳細設計未作成 |
 | [adr](adr/README.md) | 構成・技術の意思決定記録 | リポジトリ構成を記録 |
 | [testing](testing/README.md) | 受入試験・証跡 | 70件すべて未実施 |

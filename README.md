@@ -38,7 +38,7 @@ fespay/
 
 ## 現在の状態
 
-- 受領したEPP-REQ-001 v0.1と同一内容から[安定パスの現行要件書](docs/requirements/event_payment_requirements.md)を作成済み。受領時点はGit履歴で保管する。
+- 受領したEPP-REQ-001 v0.1を初期基準として[安定パスの現行要件書](docs/requirements/event_payment_requirements.md)を作成し、CR-0001を反映した現行v0.2を管理中。受領時点はGit履歴で保管する。
 - [基本設計書](docs/design/basic-design.md)はレビュー中。詳細設計の置き場所とひな形、70件の受入試験の管理表を準備済み。
 - 設計・実装・受入試験は未完了。試験管理表の初期状態はすべて「未実施」。
 - GitHub Organization とリモートリポジトリの設定状況は[設定記録](docs/team/github-setup.md)を参照。
