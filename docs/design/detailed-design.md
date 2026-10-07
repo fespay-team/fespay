@@ -8,12 +8,13 @@
 | 文書名 | FesPay 詳細設計書 |
 | 対象システム | FesPay |
 | 対象基本設計書 | [EPP-DES-001](basic-design.md)（設計v0.2、レビュー案） |
-| 版 | 0.1 |
+| 対象要件書 | [EPP-REQ-001](../requirements/event_payment_requirements.md)（現行v0.2、CR-0001承認済み） |
+| 版 | 0.2 |
 | 作成日 | 2026-10-01 |
-| ステータス | 下書き・レビュー前 |
+| ステータス | レビュー指摘修正案・再レビュー待ち |
 | 担当 | 未割当 |
 | レビュー者 | 未割当 |
-| 更新日 | 2026-10-01 |
+| 更新日 | 2026-10-07 |
 | 目的 | 確定仕様と明示した詳細設計上の補完を分け、実装の境界・永続化・処理規約を定める |
 
 対象は基本設計の初期対象に限る。初期対象外機能は実装しない。実金銭運用可能、法令適合、性能達成、セキュリティ監査済みを示す文書ではない。基本設計がレビュー案であり、本書もその承認状態を引き継ぐ。
@@ -22,7 +23,7 @@
 
 ### 2.1 根拠・区分
 
-基本設計記載の確定事項を **基本設計確定**、実装に必要な追加判断を **詳細設計上の補完**、決定権者・外部確認・実測が必要なものを **未決** と表記する。補完は基本設計を変更せず、要件変更が必要な業務ルールは追加しない。QR関連のCR-0001はレビュー中として扱う。
+基本設計記載の確定事項を **基本設計確定**、実装に必要な追加判断を **詳細設計上の補完**、決定権者・外部確認・実測が必要なものを **未決** と表記する。補完は基本設計を変更せず、要件変更が必要な業務ルールは追加しない。[CR-0001](../requirements/changes.md)は2026-09-30承認済みであり、[PR #5](https://github.com/fespay-team/fespay/pull/5)でmainに反映された現行要件v0.2を根拠に、QR表示・関連付け後承認・見積・在庫予約の期限と安全な再試行条件を確定仕様として扱う。
 
 ### 2.2 実装規約
 
@@ -101,19 +102,32 @@ TOTPは30秒周期、±1周期、再利用不可、5回/5分失敗後15分停止
 
 ## 6. 認可詳細設計
 
-すべてのhandlerは`authorize(principal, event_id, shop_id?, operation, resource?)`を呼ぶ。サーバーはアカウント状態、本人確認、membership、grant、event/shop/register停止、機能設定、受付期間、必要MFA、対象行の所属を検証する。画面表示状態を信用しない。ID指定リソースはevent/shop/account複合関係を照合し、秘匿対象は404を返す。
+認証済みhandlerは`authorize(principal, event_id?, shop_id?, operation, resource?)`を呼ぶ。サーバーは操作に応じてアカウント状態、本人確認、membership、grant、event/shop/register停止、機能設定、受付期間、必要MFA、対象行の所属を検証する。画面表示状態を信用しない。ID指定リソースはevent/shop/account複合関係を照合し、秘匿対象は404を返す。API IDだけで一括許可せず、HTTPメソッド・用途・本人操作/業務操作を別のoperationにする。E03参加、S02招待受諾は所属を作る入口であり、既存membership/grantを前提にしない。公開一覧E01と認証入口A01/A02は各入口の検証規約を適用する。
 
-| 主体 | API操作群（基本設計API ID） | 強制確認 |
+| 主体 | API操作範囲（基本設計API ID、メソッド・用途別） | 強制確認 |
 |---|---|---|
-| 来場者 | E03、Q02/Q04、T01/T03/T04、C02、F01/F02/F03、H01、P03/P05、O01/O02/O04/O05、W01/W02、N01 | event membership、対象wallet/order所有者、参加・機能・期限、本人承認 |
-| 主催者 | E02/E04～E09、S01/S03/S04、C04/C05、H02～H04、P01～P04、O03/O04、R01～R05 | owner一致、必要MFA/理由、自eventのみ。任意残高編集不可 |
-| 運営担当 | 付与されたE/S/C/H/R操作 | active grantのevent・operation・有効範囲、停止状態、追加認証 |
-| 店舗管理者 | E08、S01/S03、P01～P04、O02～O04、Q01 | event＋shop所属、主催者許可範囲、管理対象店舗 |
-| レジ担当 | Q01/Q03、O02/O03（付与操作のみ） | register割当、shop・event一致、最新grant。返金/総売上は付与なければ拒否 |
-| 返金権限者 | R02、T05 | 元取引event/shop一致、返金grant、MFA、累計・数量上限 |
+| アカウント本人・参加前 | A01～A04の本人認証管理、E02 POST作成/GET案内、E03 POST参加、S02 POST受諾、S04指名された新所有者の受諾 | E02作成は確認済み有効アカウント。参加は条件版・同意・必要時PW、招待受諾は宛先本人・期限・発行者の現役権限。S04は旧所有者の再認証・指名と新所有者本人の受諾を別操作で検証。E02 PATCHは主催者のみ |
+| 来場者 | E04 GET本人用ホーム、Q02承認/Q03本人用途/Q04照会、T01～T04本人分、C02本人照会、F01～F03、H01本人申出、P01 GET/P03/P05、O01/O02/O04本人申出/O05、W01/W02、N01 | event membership、wallet/request/cart/orderの本人所有、対象店舗の販売・機能・期限、明示承認。E04は本人情報とイベント案内だけで業務集計を返さない。P01 POST・P02/P04や他人の承認は不可 |
+| 主催者 | E02 PATCH/E04～E09、S01/S03/S04、Q01/Q03業務用途/Q04、T02店舗操作/T03/T04業務照会/T05、C01～C05、H01受付/H02～H04、P01 GET・POST/P02/P04、O02～O04、R01～R05 | owner一致、自eventの操作・必要MFA/理由。Q02の本人承認を代行せず、任意残高編集不可 |
+| 運営担当 | C01～C05、H01受付/H02～H04、Q01/Q03業務用途/Q04、T02～T05業務用途、P01 GET・POST/P02/P04、O02～O04、R01～R05のうち個別許可された操作 | active grantのevent・必要時shop・operation、停止状態、操作別追加認証。H04は払戻し管理、C03/T05は訂正、R05は監査の専用権限。イベント設定・運営任命・招待は不可 |
+| 店舗管理者 | E08 PATCH自店舗、S01/S03自店舗レジ担当、Q01/Q03業務用途/Q04、T02店舗操作/T03/T04自店舗照会、P01 GET・POST/P02/P04、O02～O04、R01/R03/R04 | event＋shop所属、主催者許可範囲。E08 POST店舗作成・S04所有者交代は不可。返金は下記の個別権限が必要 |
+| レジ担当 | Q01/Q03業務用途/Q04、T02店舗操作/T03/T04自店舗照会、P01 GET会計用、O02/O03 | register割当、shop・event一致、最新会計/受渡し権限。商品変更・返金・集計・CSVは下記の個別権限がある場合だけ許可、招待不可 |
+| 商品・在庫の個別権限者 | P01 POST/P02/P04 | 対象店舗の商品/在庫管理grant。P01 GETの閲覧権限とは分離 |
+| 返金権限者 | R02、O04の返金を伴う店舗取消 | 元取引event/shop一致、返金grant、MFA、累計・数量上限。返金grantだけでC03/T05の訂正は許可しない |
+| 集計・CSVの個別権限者 | R01/R03/R04 | 現在のevent/shop集計・CSV grant。R04は生成者一致と取得時の現在権限を確認 |
 | プラットフォーム管理者 | A05/E10/R05 | 特権grant・MFA・理由。業務権限自己付与不可 |
 
-権限と資源状態の読取り・業務更新を同一Tx内で行う。grant変更との競合はgrant行をFOR UPDATEでロックし、金銭確定と解除の順序を直列化する。
+兼務者の本人操作には来場者の条件を適用し、業務ロールを本人承認の代用にしない。Q03はさらに次の用途で分ける。受取用情報をO05/F03で発行する場合も同じ用途検証を適用する。
+
+| Q03の用途 | 発行/表示 | resolve/関連付けの主体・条件 |
+|---|---|---|
+| 受付用QR | 参加済み本人 | 対象イベントの該当現金処理権限者。本人特定に限り、チャージ/払戻し確定の権限・承認を与えない |
+| B方式支払QR | 参加済み本人 | 対象店舗会計権限者。最初の有効な要求への一回関連付け |
+| A方式会計QR | 対象店舗会計権限者 | 参加済み支払者本人。最初に関連付いた本人のみQ02承認可 |
+| 譲渡受取QR | 参加済み受取人本人 | 同イベントの送信者本人。譲渡ON・相手照合・送信者承認を別途検証 |
+| 注文受取情報 | 注文所有者本人 | 自店舗の受渡し権限者。受取照合と消費を同一Txで検証 |
+
+権限と資源状態の読取り・業務更新を同一Tx内で行う。grant変更との競合はgrant行をFOR UPDATEでロックし、金銭確定と解除の順序を直列化する。結果照会と冪等再送の保存結果返却にも現在の本人所有/業務照会権限を検証する。解除済み担当者には業務結果を返さない。照会には新規処理の受付期間・機能OFF・販売終了の条件を流用せず、履歴と既存手続の安全な完了・取消・調査は操作別条件で許可する（ROL-06、CSH-04、TX-03～05）。
 
 ## 7. データモデル物理設計
 
@@ -133,27 +147,27 @@ TOTPは30秒周期、±1周期、再利用不可、5回/5分失敗後15分停止
 | events（イベント） | `id UUID NN`、`owner_account_id UUID NN`、`name varchar(100) NN`、`status text NN`、`listing_status text NN`、`participation_mode text NN`、`starts_at/ends_at timestamptz NN`、`settings jsonb NN '{}'`、`version int NN 1`、日時 | PK、FK accounts、CHECK時刻順・状態列挙、INDEX(status,starts_at,id)。業務履歴参照中削除不可 |
 | event_policies（条件版） | `id UUID NN`、`event_id UUID NN`、`version int NN`、`terms jsonb NN`、`effective_at timestamptz NN`、`created_by UUID NN`、`created_at` | PK、FK event/account、UNIQUE(event_id,version)、INDEX(event_id,effective_at)。append-only |
 | memberships（参加） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`status text NN 'ACTIVE'`、`accepted_policy_version int NN`、`joined_at timestamptz NN`、日時 | PK、複合一意(event_id,account_id)、FK event/account/policy。INDEX(account_id,status)。参加だけではgrantなし |
-| grants（権限付与） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`shop_id UUID ?`、`operation text NN`、`status text NN`、`granted_by UUID NN`、`version int NN 1`、日時 | PK、FK event/account/shop、UNIQUE(event_id,account_id,shop_id,operation)、INDEX(event_id,shop_id,status)。親発行者削除に依存しない |
+| grants（権限付与） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`shop_id UUID ?`、`operation text NN`、`status text NN`、`granted_by UUID NN`、`version int NN 1`、日時 | PK、FK event/account/shop、7.4のshop NULL/非NULL別の部分一意索引、INDEX(event_id,shop_id,status)。同一scope/operationは状態にかかわらず1行、再付与はversion更新＋監査。親発行者削除に依存しない |
 | invitations（招待） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID ?`、`token_hash bytea NN`、`email CITEXT NN`、`grant_spec jsonb NN`、`status text NN`、`expires_at timestamptz NN`、`created_by UUID NN`、`accepted_by UUID ?`、日時 | PK、UNIQUE token_hash、INDEX(event_id,status,expires_at)。72h・一回限り、秘密ハッシュは失効30日後削除 |
 | shops（店舗） | `id UUID NN`、`event_id UUID NN`、`name varchar(100) NN`、`description varchar(1000) NN ''`、`status text NN`、`suspension jsonb NN '{}'`、`version int NN 1`、日時 | PK、UNIQUE(event_id,id)、INDEX(event_id,status)。参照履歴があれば削除不可 |
 | registers（レジ） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`register_code varchar(64) NN`、`status text NN`、`assigned_account_id UUID ?`、日時 | PK、複合FK(event_id,shop_id)、UNIQUE(shop_id,register_code)、INDEX(shop_id,status) |
 | wallets（残高射影） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`available_amount numeric(30,0) NN 0`、`held_amount numeric(30,0) NN 0`、`refund_only_amount numeric(30,0) NN 0`、`version bigint NN 1`、日時 | PK、UNIQUE(event_id,account_id)、UNIQUE(event_id,id)、複合FK membership、CHECK各額>=0、INDEX(event_id,account_id)。台帳から再構築可能な射影 |
-| holds（払戻し拘束） | `id UUID NN`、`event_id UUID NN`、`wallet_id UUID NN`、`cash_operation_id UUID NN`、`amount numeric(30,0) NN`、`status text NN`、`expires_at timestamptz NN`、`version int NN 1`、日時 | PK、FK wallet/operation、CHECK amount>0、UNIQUE(cash_operation_id)、INDEX(event_id,status,expires_at)。自動解除禁止 |
+| holds（払戻し拘束） | `id UUID NN`、`event_id UUID NN`、`wallet_id UUID NN`、`cash_operation_id UUID NN`、`source_bucket text NN`、`hold_transaction_id UUID NN`、`release_transaction_id UUID ?`、`amount numeric(30,0) NN`、`status text NN`、`expires_at timestamptz NN`、`version int NN 1`、日時 | PK、複合FK event/wallet/operation/transaction、CHECK amount>0、CHECK source_bucket IN('AVAILABLE','REFUND_ONLY')、UNIQUE(cash_operation_id)、INDEX(event_id,status,expires_at)。HELD時に作成、元区分を保持し取消は同区分へ戻す。自動解除禁止 |
 | transactions（取引） | `id UUID NN`、`event_id UUID NN`、`type text NN`、`status text NN 'SUCCEEDED'`、`amount numeric(30,0) NN`、`actor_account_id UUID NN`、`source_ref UUID ?`、`occurred_at timestamptz NN`、`idempotency_id UUID NN`、`metadata jsonb NN '{}'`、`created_at` | PK、UNIQUE(event_id,id)、FK event/account/idempotency、CHECK amount>0、INDEX(event_id,occurred_at DESC,id)、INDEX(source_ref)。確定後更新/削除禁止 |
 | ledger_entries（台帳明細） | `id UUID NN`、`event_id UUID NN`、`transaction_id UUID NN`、`account_code text NN`、`wallet_id UUID ?`、`amount numeric(31,0) NN`、`created_at` | PK、複合FK(event_id,transaction_id)、FK wallet、INDEX(event_id,transaction_id)、INDEX(wallet_id,created_at)。transaction内SUM(amount)=0は遅延制約triggerで検査。append-only |
 | idempotency_keys（冪等結果） | `id UUID NN`、`event_id UUID NN`、`actor_account_id UUID NN`、`operation text NN`、`key varchar(128) NN`、`request_hash bytea NN`、`result_resource_id UUID ?`、`response_snapshot jsonb ?`、`status text NN`、`created_at` | PK、UNIQUE(actor_account_id,event_id,operation,key)、INDEX(status,created_at)。取引保存期間保持 |
-| payment_requests（支払要求） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`register_id UUID ?`、`payer_account_id UUID ?`、`token_id UUID ?`、`type text NN`、`status text NN`、`amount numeric(30,0) NN`、`content_snapshot jsonb NN`、`content_hash bytea NN`、`expires_at timestamptz NN`、`version int NN 1`、`transaction_id UUID ?`、日時 | PK、複合FK shop/event、FK account/transaction、CHECK amount>0、INDEX(event_id,status,expires_at)、payer/event/statusの承認待ち検索。状態列挙は8章 |
+| payment_requests（支払要求） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`register_id UUID ?`、`payer_account_id UUID ?`、`token_id UUID ?`、`type text NN`、`status text NN`、`amount numeric(30,0) NN`、`content_snapshot jsonb NN`、`content_hash bytea NN`、`expires_at timestamptz NN`、`version int NN 1`、`transaction_id UUID ?`、日時 | PK、複合FK shop/event、FK account/transaction、CHECK amount>0、CHECK type IN('A','B','C')、CHECK status<>'AWAITING_APPROVAL' OR payer_account_id IS NOT NULL、7.4のB承認待ち部分一意索引、INDEX(event_id,status,expires_at)。状態列挙は10章 |
 | tokens（用途限定token） | `id UUID NN`、`event_id UUID NN`、`purpose text NN`、`token_hash bytea NN`、`subject_account_id UUID ?`、`resource_id UUID ?`、`expires_at timestamptz NN`、`consumed_at timestamptz ?`、`revoked_at timestamptz ?`、日時 | PK、UNIQUE token_hash、INDEX(event_id,purpose,expires_at)。一回消費は条件付きUPDATE |
-| cash_operations（現金処理） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID ?`、`account_id UUID NN`、`operator_account_id UUID NN`、`type text NN`、`status text NN`、`amount numeric(30,0) NN`、`transaction_id UUID ?`、`external_fact text ?`、`reason text ?`、`version int NN 1`、日時 | PK、複合FK event/shop、FK accounts/transaction、CHECK amount>0、INDEX(event_id,type,status,created_at) |
+| cash_operations（現金処理） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID ?`、`account_id UUID NN`、`operator_account_id UUID NN`、`type text NN`、`balance_source text ?`、`status text NN`、`amount numeric(30,0) NN`、`transaction_id UUID ?`、`external_fact text ?`、`reason text ?`、`version int NN 1`、日時 | PK、UNIQUE(event_id,id)、複合FK event/shop/transaction、FK accounts、CHECK amount>0、CHECK type<>'CASH_REFUND' OR (balance_source IS NOT NULL AND balance_source IN('AVAILABLE','REFUND_ONLY'))、7.4の未完了払戻し部分一意索引、INDEX(event_id,type,status,created_at)。通常/返金専用交付は共通type CASH_REFUNDで元区分を区別 |
 | cash_cases（現金調査案件） | `id UUID NN`、`event_id UUID NN`、`cash_operation_id UUID NN`、`status text NN`、`reason text NN`、`assigned_to UUID ?`、`resolved_at timestamptz ?`、`resolution jsonb ?`、日時 | PK、FK operation/account、INDEX(event_id,status,created_at)。解決履歴はAuditにも追記 |
 | products（商品） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`name varchar(100) NN`、`description varchar(1000) NN ''`、`price numeric(30,0) NN`、`status text NN`、`image_key text ?`、`version int NN 1`、日時 | PK、UNIQUE(event_id,shop_id,id)、複合FK shop、CHECK price>0、INDEX(shop_id,status,name)。物理削除不可、停止状態で保管 |
-| inventory（現在在庫） | `event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`on_hand bigint NN 0`、`reserved bigint NN 0`、`version bigint NN 1`、日時 | PK(event_id,product_id)、複合FK product/shop、CHECK 0<=reserved<=on_hand、INDEX(shop_id,product_id) |
-| stock_moves（在庫移動） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`delta bigint NN`、`reason text NN`、`actor_account_id UUID NN`、`created_at` | PK、複合FK product/shop、CHECK delta<>0、INDEX(event_id,product_id,created_at)。append-only |
+| inventory（現在在庫） | `event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`on_hand bigint NN 0`、`reserved bigint NN 0`、`version bigint NN 1`、日時 | PK(event_id,product_id)、複合FK product/shop、CHECK 0<=reserved<=on_hand AND on_hand<=2147483647、INDEX(shop_id,product_id)。保持型bigintでもINV-03の32-bit非負整数範囲を超える値は拒否 |
+| stock_moves（在庫移動） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`kind text NN`、`refund_line_id UUID ?`、`idempotency_id UUID NN`、`delta bigint NN`、`reason text NN`、`actor_account_id UUID NN`、`created_at` | PK、複合FK product/shop/refund_line、FK idempotency、CHECK delta<>0、CHECK (kind='RETURN_TO_STOCK' AND refund_line_id IS NOT NULL AND delta>0) OR (kind<>'RETURN_TO_STOCK' AND refund_line_id IS NULL)、UNIQUE(idempotency_id,refund_line_id)、INDEX(event_id,product_id,created_at)、INDEX(event_id,refund_line_id)。append-only、再販戻しは元返金明細必須 |
 | stock_reservations（予約） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`payment_request_id UUID NN`、`order_line_id UUID ?`、`quantity integer NN`、`status text NN`、`expires_at timestamptz NN`、`version int NN 1`、日時 | PK、FK product/request/order line、UNIQUE(payment_request_id,product_id)、CHECK quantity BETWEEN 1 AND 999、INDEX(event_id,status,expires_at) |
 | orders（注文） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`account_id UUID NN`、`transaction_id UUID ?`、`payment_request_id UUID ?`、`display_number varchar(32) NN`、`channel text NN`、`status text NN`、`fulfillment_status text NN`、`total_amount numeric(30,0) NN`、`version int NN 1`、日時 | PK、UNIQUE(event_id,shop_id,id)、UNIQUE(event_id,shop_id,display_number)、FK membership/shop/transaction/request、CHECK total>=0、INDEX(shop_id,status,created_at)、INDEX(account_id,created_at) |
 | order_lines（注文明細） | `id UUID NN`、`event_id UUID NN`、`order_id UUID NN`、`product_id UUID NN`、`product_name_snapshot varchar(100) NN`、`unit_price numeric(30,0) NN`、`quantity integer NN`、`line_total numeric(30,0) NN`、`product_version int NN`、`refunded_quantity integer NN 0`、日時 | PK、複合FK(order,event)、FK product RESTRICT、CHECK unit_price>0、quantity 1..999、line_total=unit_price*quantity、0<=refunded<=quantity、INDEX(order_id) |
-| refunds（返金） | `id UUID NN`、`event_id UUID NN`、`original_transaction_id UUID NN`、`refund_transaction_id UUID ?`、`order_id UUID ?`、`actor_account_id UUID NN`、`amount numeric(30,0) NN`、`status text NN`、`reason text NN`、`idempotency_id UUID NN`、日時 | PK、FK event/transaction/order/key、CHECK amount>0、INDEX(event_id,original_transaction_id)、成立累計は元取引ロック下で検証 |
-| refund_lines（返金明細） | `id UUID NN`、`event_id UUID NN`、`refund_id UUID NN`、`order_line_id UUID NN`、`quantity integer NN`、`amount numeric(30,0) NN`、日時 | PK、FK refund/line、CHECK quantity>0 AND amount>0、INDEX(order_line_id)。累計数量はTx内検証 |
+| refunds（返金） | `id UUID NN`、`event_id UUID NN`、`original_transaction_id UUID NN`、`refund_transaction_id UUID ?`、`order_id UUID ?`、`actor_account_id UUID NN`、`destination_bucket text NN`、`amount numeric(30,0) NN`、`status text NN`、`reason text NN`、`idempotency_id UUID NN`、日時 | PK、FK event/transaction/order/key、CHECK amount>0、CHECK destination_bucket IN('AVAILABLE','REFUND_ONLY')、INDEX(event_id,original_transaction_id)、成立累計は元取引ロック下で検証。成立時の返金先分類を保持 |
+| refund_lines（返金明細） | `id UUID NN`、`event_id UUID NN`、`refund_id UUID NN`、`order_line_id UUID NN`、`quantity integer NN`、`amount numeric(30,0) NN`、`restored_quantity integer NN 0`、日時 | PK、UNIQUE(event_id,id)、FK refund/line、CHECK quantity>0 AND amount>0、CHECK restored_quantity BETWEEN 0 AND quantity、INDEX(order_line_id)。返金数量・金額は成立後不変、復元済み数量だけ在庫戻しTxで更新する射影 |
 | audit（監査） | `id UUID NN`、`event_id UUID ?`、`shop_id UUID ?`、`actor_account_id UUID ?`、`action text NN`、`target_type text NN`、`target_id UUID ?`、`reason text ?`、`before_data jsonb ?`、`after_data jsonb ?`、`request_id text ?`、`ip inet ?`、`created_at timestamptz NN` | PK、INDEX(event_id,created_at)、INDEX(actor_account_id,created_at)、追記のみ。credential/token/不要個人情報禁止 |
 | outbox（後続配信） | `id UUID NN`、`event_id UUID ?`、`aggregate_type text NN`、`aggregate_id UUID NN`、`event_type text NN`、`payload jsonb NN`、`status text NN 'PENDING'`、`retry_count int NN 0`、`next_retry_at timestamptz NN now()`、`locked_at timestamptz ?`、`processed_at timestamptz ?`、`last_error_code text ?`、`created_at` | PK、UNIQUE(id)、CHECK retry_count>=0、INDEX(status,next_retry_at,created_at)。payloadに秘密を含めない |
 | exports（CSV成果物） | `id UUID NN`、`event_id UUID NN`、`requested_by UUID NN`、`snapshot_id UUID NN`、`filters jsonb NN`、`status text NN`、`object_key text ?`、`row_count bigint ?`、`expires_at timestamptz NN`、`error_code text ?`、日時 | PK、FK event/account、INDEX(requested_by,status)、24時間後削除 |
@@ -181,11 +195,39 @@ erDiagram
   ORDERS ||--|{ ORDER_LINES : contains
   TRANSACTIONS ||--o{ REFUNDS : corrected_by
   REFUNDS ||--o{ REFUND_LINES : details
+  REFUND_LINES o|--o{ STOCK_MOVES : restored_by
   EVENTS ||--o{ AUDIT : audits
   EVENTS ||--o{ OUTBOX : emits
 ```
 
 Membership (account,event)は一意、Walletも同一組で一意。ShopはEventの子、Register/Product/Orderはshop/event複合FKを持つ。Transactionは台帳明細を2件以上持ち、削除連鎖なし。Orderは複数line、Refundは複数refund_line。Reservationはrequest/product単位で一意、成立・期限切れ・取消の各処理で同じ行をロックする。履歴・金銭根拠がある行は物理削除しない。アカウント個人情報の分離はPRV-03～05と保存基準に従う。
+
+### 7.4 同時件数・scopeの一意制約
+
+次のSQLは7.2を具体化する**詳細設計上の補完案**。DDL/migration確定時に制約名・最終enumと一致させる。B方式は1利用者・1イベントの承認待ちを1件、現金払戻しは通常額/返金専用額を合わせて同時1件に制限する（PAY-B04、CSH-01）。
+
+```sql
+CREATE UNIQUE INDEX payment_requests_one_pending_b
+  ON payment_requests (event_id, payer_account_id)
+  WHERE type = 'B' AND status = 'AWAITING_APPROVAL';
+
+CREATE UNIQUE INDEX cash_operations_one_open_refund
+  ON cash_operations (event_id, account_id)
+  WHERE type = 'CASH_REFUND'
+    AND status IN ('PREPARED', 'HELD', 'CASH_HANDING', 'INVESTIGATING');
+
+CREATE UNIQUE INDEX grants_event_scope
+  ON grants (event_id, account_id, operation)
+  WHERE shop_id IS NULL;
+
+CREATE UNIQUE INDEX grants_shop_scope
+  ON grants (event_id, account_id, shop_id, operation)
+  WHERE shop_id IS NOT NULL;
+```
+
+B要求の関連付け時はwallet行、現金払戻し開始時もwallet行をロックして既存処理を再確認し、別キー・別端末・別担当の要求でも部分一意索引を最終防壁にする。競合は409 `INVALID_STATE`と認可済みの既存要求照会先を返す。同じ冪等キーの再送は9.3に従う。期限切れのB要求は要求・予約/在庫を共通順でロックし、実時刻で期限を確認してEXPIRED/予約解放を同一Txで確定してから新要求を作る。払戻しは警告期限を過ぎても拘束を自動解除せず、PAIDまたは未交付確認済みCANCELLEDまで新規開始を拒否する。PREPARED取消は未交付確認を記録し、拘束作成前なら残高移動は行わない。
+
+PostgreSQLの通常UNIQUEはNULLを同値にしないため、shop_idがNULLのイベント全体grantと非NULLの店舗grantを別々の部分一意索引で保証する。通常UNIQUE(event,account,shop,operation)だけには依存しない。再付与時は同じgrant行を更新してversion・監査を残し、重複行を増やさない（[公式の一意制約仕様](https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS)）。
 
 ## 8. 金銭・台帳詳細設計
 
@@ -196,23 +238,32 @@ Membership (account,event)は一意、Walletも同一組で一意。ShopはEvent
 | 現金チャージ | cash受領事実確認後、取引+利用者借方相当/現金受領勘定貸方の均衡仕訳 | available加算。現金事実とDB Txは非原子的、照合案件で扱う |
 | 決済 | 利用者利用可能勘定から店舗売上勘定へ振替 | available減、注文なら売上/注文/在庫も同一Tx |
 | 譲渡 | 送信者から受取人へイベント内振替 | 送信者減・受取人増、イベント総額不変 |
-| 払戻し申出 | 取引を成立させず、availableからheldへ内部振替とHoldを作成 | available減、held増。現金交付確定は別操作 |
+| 通常払戻し申出 | 本人承認でavailableからheldへ内部振替Transaction・仕訳・Holdを作成 | available減、held増。現金交付は未成立、受付ON・通常期間を検証 |
+| 返金専用額の交付申出 | 本人承認でrefund_onlyからheldへ内部振替Transaction・仕訳・Holdを作成 | refund_only減、held増。主催者の精算用受付を検証し、通常払戻しOFF・通常受付終了だけでは拒否しない |
 | 払戻しPAID | heldから払戻し済勘定へ別取引 | held減、現金交付記録。既交付現金を取消さない |
-| 未交付取消 | heldからavailableへ解放取引 | held減、available増。現金未交付確認必須 |
-| 購入返金 | 元取引を変更せず、新TransactionとRefundを追加 | 販売中はavailableへ、販売終了後はrefund_onlyへ。返金専用額は支払不可 |
+| 未交付取消 | heldからHold.source_bucketへ解放Transaction | held減、元区分を同額増。現金未交付確認必須、返金専用額をavailableへ変換しない |
+| 購入返金 | 元取引を変更せず、新TransactionとRefundを追加 | 通常支払期間内かつ残高有効ならavailableへ、販売終了/失効後はrefund_onlyへ。返金専用額は支払・譲渡・自動失効不可 |
 | 失効/訂正 | 理由・対象を参照する別Transaction | 既存仕訳を更新/削除しない |
 
 各Transactionは正数amount、type、actor、event、idempotency参照を持つ。仕訳金額の絶対値は30桁以下、符号合計0、最低2行。`NUMERIC(30,0)`範囲を越える計算は全体ROLLBACK。丸めなし。数量は整数、金額からの換算なし。チャージ・譲渡・保有残高に業務上限を設けない。
+
+### 8.1 返金専用額の精算用現金交付
+
+返金専用額の現金交付はREF-03の確定仕様であり、新規の通常払戻し受付条件とは分ける。H01～H04の共通処理を用い、cash_operation.balance_sourceとHold.source_bucketを`REFUND_ONLY`として固定する。主催者が設定する精算用受付の場所・時間・連絡先はイベント条件版に保持する。本人確認・本人承認・対象残高・担当者の払戻し権限/業務追加認証は省略しない。通常額との混合申出は行わず、元区分を明示して1件ずつ処理する。
+
+PREPAREDでは現金を渡さず、HELD遷移時にwalletをロックし、元区分減算・held加算・内部振替Transaction/台帳・Hold・監査・Outboxを同一Txで確定する。Hold.source_bucketはcash_operation.balance_sourceと一致させ、以後変更しない。Hold.hold_transaction_idで内部振替を参照する。現金交付TransactionはPAID時に別途成立し、cash_operation.transaction_idとHold.release_transaction_idで参照する。未交付取消は元区分への解放Transactionを追加し、Hold.release_transaction_idに保持する。これにより拘束中も台帳から3区分を再構築できる（LED-01/03）。
+
+5分警告・30分調査一覧、CASH_HANDING以降の即時調査対象表示、自動解除禁止、結果不明時の再交付禁止、担当者引継ぎの監査は通常額と共通。受付終了後も開始済み手続の安全な完了・取消・調査を許可する。返金作成から30日は案内期間であり、未交付を理由に返金専用額/拘束を消去せず、未解決のままイベント完了・データ削除を許可しない（REF-03、CSH-02～06、EVT-06）。
 
 ## 9. トランザクション・排他・冪等性
 
 ### 9.1 共通Tx順序
 
 1. `BEGIN`。冪等キー行を作成、競合時既存行を取得。
-2. 内容hashが異なれば409。同hashなら保存結果を返し、再実行しない。
-3. Event/停止・membership・grantをロックまたは条件付き再読込し認可する。
-4. 対象行を固定順で`SELECT ... FOR UPDATE`: walletsをaccount_id昇順、payment_request/transaction、productsをproduct_id昇順、reservations、order/refund元行。
-5. 業務条件と値域を検証、業務データ・Transaction・Ledger Entry・wallet射影を更新。
+2. アカウント/セッション・event所属・grant・対象scopeを同一Txで再検証する。Event制御・認可行を共通順でロックまたは条件付き再読込する。既存キーは現在の結果照会権限、新規キーは操作権限・必要MFA・停止・機能・期間で認可し、拒否時は保存結果や内容相違を返さない。
+3. 認可後に内容hashを照合する。異なれば409。同hashかつ完了済みなら現在の照会範囲に限定した保存結果を返し、業務更新を再実行しない。処理中なら202/409で同一キー照会へ案内する。受付終了・機能OFFだけを理由に既成立結果を未成立にしない。読み取りTxも終了してから応答する。
+4. 新規処理の対象行を固定順で`SELECT ... FOR UPDATE`: walletsをaccount_id昇順、products/inventoryをproduct_id昇順、payment_requests/元transactions、orders/refundsとその明細、stock_reservations、cash_operations/holds、用途token。同種行はID昇順。不要な対象群は飛ばしてよいが、9.2の各業務・expiry worker・在庫戻しでも相対順を逆転させない。
+5. 必要なロック取得後の実時刻で期限と業務条件・値域を検証し、業務データ・Transaction・Ledger Entry・wallet射影を更新。期限判定の時計は13章に従う。
 6. AuditとOutboxを同じTxにINSERT。
 7. 遅延仕訳制約とCHECKを検証してCOMMIT。応答はcommit後のみ。
 
@@ -224,8 +275,10 @@ Membership (account,event)は一意、Walletも同一組で一意。ShopはEvent
 |---|---|
 | wallet同時更新 | wallet行をevent/account順でFOR UPDATE。残高不足なら409、部分確定しない |
 | 二重決済/Payment Request承認 | request行FOR UPDATE、`status=AWAITING_APPROVAL`条件付きUPDATE、transactionの要求参照一意、冪等キーUNIQUE |
+| B承認待ちの同時作成 | wallet行と既存request/関連在庫を9.1の順でロック、7.4の部分一意索引。別キーの別会計は409、期限切れ旧要求は解放してから新規作成 |
 | 二重返金 | 元transactionと対象order_lineをFOR UPDATE。確定refund累計・返金数量を再計算して上限超過409 |
-| 二重払戻し | walletとcash_operation/hold行をFOR UPDATE、cash_operation idempotency UNIQUE。CASH_HANDING後は自動解放禁止 |
+| 二重払戻し | walletとcash_operation/hold行をFOR UPDATE、7.4の未完了払戻し部分一意索引、冪等キーUNIQUE。通常額/返金専用額を合わせて1件。CASH_HANDING後は自動解放禁止 |
+| 返金商品の二重在庫復元 | inventory、元transaction、order/refundと明細を9.1の順でFOR UPDATE。成立返金数量－restored_quantity以内を条件付き更新、StockMoveと在庫を同一Txで追加 |
 | 在庫競合 | inventory行product_id順FOR UPDATE。`on_hand-reserved >= qty`条件付き更新。全明細一括、不可なら全体拒否 |
 | reservation expiry vs pay | reservation行FOR UPDATE、期限と状態をDB時刻で判定。成立か解放の一方だけが状態更新 |
 | 注文同時更新 | order行FOR UPDATEとversion条件。古いversionは409＋最新状態 |
@@ -233,7 +286,7 @@ Membership (account,event)は一意、Walletも同一組で一意。ShopはEvent
 
 ### 9.3 冪等性
 
-金銭/在庫確定APIは`Idempotency-Key`必須（1～128 ASCII可視文字、**補完**）。DB一意キー `(actor_account_id,event_id,operation,key)`、canonical JSON SHA-256を保存する。同じ内容は同じresource/結果を返す。同キー異内容は409 `IDEMPOTENCY_CONFLICT`。応答喪失時は同キー再送またはresource照会。処理中行は短時間待機後202/409 `REQUEST_IN_PROGRESS`を返し、二重処理しない。永続保持は台帳と同期間。Outboxは`outbox.id`を配信側dedupe keyにする。配信はat-least-once、受信側重複排除を必須とする。
+金銭/在庫確定APIは`Idempotency-Key`必須（1～128 ASCII可視文字、**補完**）。DB一意キー `(actor_account_id,event_id,operation,key)`、canonical JSON SHA-256を保存する。同じ内容は同じresource/結果を返す。同キー異内容は409 `IDEMPOTENCY_CONFLICT`。応答喪失時は同キー再送またはresource照会。すべての結果返却・内容衝突・処理中応答の前に、現在の本人所有/業務照会権限を9.1のTx内で再検証する。過去の実行権限や冪等キーを照会権限の代用にしない。処理中行は短時間待機後202/409 `REQUEST_IN_PROGRESS`を返し、二重処理しない。永続保持は台帳と同期間。Outboxは`outbox.id`を配信側dedupe keyにする。配信はat-least-once、受信側重複排除を必須とする。
 
 ## 10. 状態遷移詳細
 
@@ -244,7 +297,7 @@ Membership (account,event)は一意、Walletも同一組で一意。ShopはEvent
 | Event | 下書き→公開・準備中→開催中→販売終了→精算中→完了 | 完了後訂正は理由付き再開。未解決残高/現金/注文/返金があれば完了不可 |
 | Payment Request | CREATED→AWAITING_APPROVAL→SUCCEEDED/DECLINED/CANCELLED/EXPIRED。CREATED→CANCELLED | SUCCEEDEDから逆遷移なし。内容変更は旧取消+新規 |
 | Transaction | 作成→SUCCEEDEDの一方向。現金結果不明等の業務状態はcash_operation/caseに保持 | 成立Transactionの取消/UPDATE/DELETE禁止。訂正は別取引 |
-| Hold/払戻し | PREPARED→HELD→CASH_HANDING→PAID。未交付確認後CANCELLED。結果不明→INVESTIGATING | 5分警告、30分調査一覧、自動解除なし。CASH_HANDING以降調査必須 |
+| 払戻しcash_operation/Hold | cash_operationはPREPARED→HELD→CASH_HANDING→PAID。HELD時にHold作成、未交付確認後CANCELLED、結果不明→INVESTIGATING | 通常額/返金専用額で共通。5分警告、30分調査一覧、自動解除なし。CASH_HANDING以降調査必須、取消解放は元区分へ |
 | Refund | 要求→成立、または未完了調査 | 元Transaction変更なし。30日経過で消去しない |
 | Order | 支払待ち→受付済み→調理・準備中→受取待ち→受取完了 | 支払済取消は返金と対応。提供/返金状態は独立 |
 | Stock Reservation | RESERVED→CONSUMED / RELEASED / EXPIRED | 終端から遷移なし。部分予約なし |
@@ -265,9 +318,9 @@ APIパスは基本設計14章の論理案を引き継ぎ、パスを確定仕様
 | S01–S04 | 招待先/権限/受諾→invitation/grant状態 | tokenハッシュ一回消費、受諾とgrant作成同一Tx |
 | Q01–Q04 | 店舗/方式/金額/明細/承認内容版→request状態/transaction ID | request承認はwallet・requestロック、内容hash一致。GETは結果照会 |
 | T01–T05/W01–W02 | wallet summary、履歴、取引、訂正理由→残高/取引結果 | T02/T05は冪等必須。成功応答はcommit後 |
-| C01–C05/H01–H04 | QR/額/現金事実/担当/調査理由→cash_operation/hold/case | 現金記録と台帳Tx区別。結果不明を照会し、勝手に再現金交付しない |
+| C01–C05/H01–H04 | QR/額/現金事実/担当/調査理由、H01 balance_source→cash_operation/hold/case | H01の元区分AVAILABLE/REFUND_ONLYをサーバー検証し、後者は精算用受付を適用。内部振替と現金交付の台帳Txを区別。結果不明を照会し、勝手に再現金交付しない |
 | F01–F03 | 受取token/金額/承認→譲渡結果/受取QR | 送受walletをID順ロック、event同一・譲渡ON |
-| P01–P05 | 商品/在庫移動/カート/checkout→商品版/予約期限/request | 画像5MB制限。checkout全明細予約を単一Tx |
+| P01–P05 | 商品/在庫移動/カート/checkout→商品版/予約期限/request | P01 GETは商品閲覧、POSTは商品管理。P02再販戻しはkind/refund_line_id/数量/再販売可能確認/理由/キー必須、累計数量を再検証。画像5MB制限。checkout全明細予約を単一Tx |
 | O01–O05 | 支払request/注文状態/受取確認→order・line snapshot | 決済・注文・在庫・台帳同一Tx。状態更新はversion必須 |
 | R01–R05 | 集計条件/CSV条件→report/export/snapshot | 範囲認可、snapshot固定、download時再認可 |
 | N01 | Last-Event-ID→SSE stream | 有効認証+event membership、送信対象再認可 |
@@ -313,17 +366,45 @@ Bodyはstrict schema（未知フィールド拒否）、UUID形式、文字列�
 
 ## 13. QR・トークン詳細
 
-基本設計の用途別有効時間を維持する（受付60秒、B表示60秒/要求180秒、A表示300秒/要求180秒、譲渡300秒）。固定Cは公開識別URLで金額・残高・承認を含めず、停止/再発行可能。CR-0001レビュー中の仕様は未採用確定とし、現行要件との差を実装前に解決する。
+承認済みCR-0001に従い、受付QR60秒、B表示QR60秒、A表示QR300秒、譲渡受取QR300秒、関連付け後承認・見積・在庫予約180秒を確定仕様とする。固定Cは公開識別URLで金額・残高・承認を含めず、停止/再発行可能。
 
-QR本体は自サービスのHTTPS URLと不透明tokenのみ。金額・残高・氏名・メール・恒久権限を含めない。tokenはCSPRNG生成、生値を発行応答だけで返しDBにはSHA-256以上の検証用hash保存。**bit長は基本設計未決のため固定しない**。purpose/event/subject/resource/expiry/consumedを照合し、消費は`UPDATE ... WHERE consumed_at IS NULL AND expires_at > now() RETURNING`で一回性を保証。読取成功は決済成功でなく、常にPayment Requestを照会する。
+受付/B表示QRは前面表示中・有効セッションで操作中の場合だけ自動更新する。旧tokenは自身の期限までで、更新によって延長しない。A方式は未関連付けのまま期限切れになり、会計の金額・商品版・販売可否が不変かつ店舗画面が前面で有効業務セッションにある場合だけ新QRを生成する。画面終了・バックグラウンド化・ログアウト・会計変更・販売停止で自動生成を停止する。
+
+A/Bの本人関連付け時に要求・見積・全明細予約の180秒期限を同じ実時刻から設定し、QR表示期限と独立させる。未関連付けA表示だけでは予約しない。表示更新で関連付け済み要求を失効させない。関連付け後の拒否・期限切れは旧要求/予約を解放し、価格・在庫・権限・停止状態を再検証した新要求を作る。旧要求・見積・予約の期限を延長しない。譲渡受取QRは1譲渡で消費し、次回は受取人が新規発行する。UIは各期限の残り時間・期限前警告と安全な再試行導線を表示する。
+
+QR本体は自サービスのHTTPS URLと不透明tokenのみ。金額・残高・氏名・メール・恒久権限を含めない。tokenはCSPRNG生成、生値を発行応答だけで返しDBにはSHA-256以上の検証用hash保存。**bit長は基本設計未決のため固定しない**。用途ごとのpurpose/event/subject/resource/expiry/消費・失効状態を照合する。QR読取成功は決済成功でなく、Payment Requestの確定結果を照会する。
+
+### 13.1 ロック取得後の期限判定
+
+PostgreSQLの`now()`/`CURRENT_TIMESTAMP`はTx開始時刻で固定されるため、期限判定に使わない。9.1の必要な行ロックをすべて取得した後、`clock_timestamp()`を一度取得して判定時刻とする。たとえばtoken消費は次の順に行い、lock待ち中に期限を越えた要求を受理しない（[公式の日時関数仕様](https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT)）。
+
+```sql
+-- BEGINと現在の認可、関連業務行のロック取得後に実行する。
+SELECT id FROM tokens WHERE id = :token_id FOR UPDATE;
+SELECT clock_timestamp() AS checked_at;
+-- checked_atは直前に取得したサーバー値。クライアント値は使わない。
+UPDATE tokens
+   SET consumed_at = :checked_at
+ WHERE id = :token_id
+   AND consumed_at IS NULL
+   AND revoked_at IS NULL
+   AND expires_at > :checked_at
+RETURNING id;
+```
+
+更新0件なら期限切れ/消費済み/失効として拒否する。用途・event・subject・resource一致もロック下で検証し、関連付け/金銭更新と同一Txで消費する。Payment Request承認、見積、在庫予約、招待受諾も必要ロック後の実時刻で判定し、境界は`checked_at < expires_at`、期限と等しい時刻は拒否する。途中で追加のロック待ちが生じた場合は全必要ロック取得後に実時刻を取り直して再検証する。監査・作成日時のDEFAULT now()は記録用途なので維持する。
 
 ## 14. 商品・在庫・注文
 
-商品更新はversion付き。価格・商品名・商品version・単価・数量・合計をcheckout時にrequest/order lineへsnapshot保存し、商品master更新で過去注文を変更しない。数量は整数、販売可能数=`on_hand-reserved`。在庫移動は理由付きStockMove追記とinventory残高更新を同一Tx。負数・予約数未満になる調整は拒否。
+商品更新はversion付き。価格・商品名・商品version・単価・数量・合計をcheckout時にrequest/order lineへsnapshot保存し、商品master更新で過去注文を変更しない。数量は整数、販売可能数=`on_hand-reserved`。在庫移動は理由付きStockMove追記とinventory残高更新を同一Tx。負数・予約数未満・INV-03の32-bit非負整数範囲を超える調整は拒否。
 
 Checkoutはカートversion、商品status/価格version、店舗受付、在庫を再検証し、全明細予約180秒と支払要求を一括作成。予約中の価格固定はsnapshotに保持。決済成功でinventory.on_handとreservedを予約数量分減算、reservationをCONSUMED、注文/line/ledgerを作成。取消・期限切れはreservedのみ解放しRELEASED/EXPIREDにする。expiry workerと決済は予約行ロックで競合解決。
 
-OrderLineは商品名、単価、商品版、数量、line_totalを保存。部分返金はrefund_lineの数量・金額を追記し、提供状態を書き換えない。再販可能在庫への戻しは明示的なStockMoveとして運営判断後のみ行い、自動で戻さない（基本設計に再販自動化なし）。受取照合は8桁コード、注文/10分5失敗で保留、公開呼出画面に氏名・メール・残高を出さない。
+OrderLineは商品名、単価、商品版、数量、line_totalを保存。部分返金はrefund_lineの数量・金額を追記し、提供状態を書き換えない。再販可能在庫への戻しは自動で行わず、P02の`RETURN_TO_STOCK`として対象返金明細・数量・再販売可能確認・理由・冪等キーを指定する。対象商品/注文/返金明細が同じevent/shopに属し、返金が成立済みであることを検証する。金額入力会計など商品返金明細がない返金ではこの在庫戻しを行わない。
+
+在庫戻しは9.1の共通順でinventory、元transaction、order/refundと対象明細をロックし、`復元可能数 = refund_line.quantity - restored_quantity`を計算する。指定数量が復元可能数を超えたら409、負数・0・在庫値域超過も全体拒否する。`restored_quantity + qty <= quantity`条件付き更新、正数StockMove追加、inventory.on_hand加算、監査・Outbox・冪等結果を同一Txで確定する。StockMoveはrefund_line_idを保持し、射影restored_quantityはその明細へのRETURN_TO_STOCKのdelta合計から再計算できる。成立後の返金数量・金額は書き換えない。同じキーは既存結果、別キーでも残り数量を超えられず、並行実行による二重復元を拒否する（REF-04、AT-046）。
+
+受取照合は8桁コード、注文/10分5失敗で保留、公開呼出画面に氏名・メール・残高を出さない。
 
 ## 15. Outbox・SSE
 
@@ -377,7 +458,13 @@ Auditは金銭、権限、招待、返金、払戻し、現金、停止/再開�
 | 利用可能残高非負 | wallet CHECK | 残高不足判定 | wallet FOR UPDATE |
 | event/shop所属一致 | 複合FK | scope認可 | 同一Txで最新権限検査 |
 | 二重確定なし | UNIQUE冪等/参照 | 状態遷移 | 対象行FOR UPDATE |
+| B承認待ち/未完了払戻しは各1件 | 7.4の部分一意索引、B承認待ちpayer NN | 既存要求確認、通常額/返金専用額の共通枠 | wallet/要求ロック、競合409 |
+| grant scope一意 | shop NULL/非NULL別の部分一意索引 | 再付与は同じ行の版更新 | grant行ロック、変更監査 |
 | 返金累計以下 | 索引/FK | 元額・数量累計検証 | 元transaction/order_lineロック |
+| 再販戻し累計は成立返金数量以内 | StockMoveのrefund_line FK、restored_quantity CHECK | 成立・再販売可能確認・残り数量/所属照合 | inventory/元取引/明細ロック、在庫/StockMove/射影同一Tx |
+| 返金専用額の交付/取消 | source_bucket列挙、Hold/Transaction FK | 精算用受付、取消は元区分、通常OFFと分離 | wallet/現金処理/holdロック、台帳同一Tx |
+| 再送結果も現在の照会権限内 | 冪等キー主体/event FK | 現在の本人所有/業務照会権限 | 保存結果返却前にTx内再認可 |
+| 期限境界を越えて消費/承認しない | 期限列、消費/状態条件付きUPDATE | 全必要ロック後のclock_timestampで検証 | ロック待ち後再判定、expires_atと同時は拒否 |
 | 在庫予約以内 | CHECK reserved<=on_hand | 可用数/全明細検証 | inventory/reservationロック |
 | 注文snapshot不変 | FK、列制約 | masterからsnapshot作成 | 成立後変更なし |
 | 監査/台帳append-only | 権限、trigger | 訂正は別行 | 同一Txで関連付け |
@@ -392,17 +479,32 @@ Auditは金銭、権限、招待、返金、払戻し、現金、停止/再開�
 | DB統合 | FK/UNIQUE/CHECK、複合event FK、遅延仕訳制約、append-only、migration |
 | API | request/response schema、全認証・認可境界、IDOR、error mapping、rate limit |
 | Tx/冪等 | 同一キー再送、異内容衝突、commit前障害、commit後応答喪失、DB rollback、結果照会 |
-| 排他 | 同一wallet決済、二重承認、二重返金、二重払戻し、予約expiryと決済、注文同時遷移 |
+| 排他 | 同一wallet決済、B承認待ち同時作成、二重承認、二重返金、通常/返金専用払戻し同時開始、再販戻し累計、予約expiryと決済、注文同時遷移 |
 | Outbox/SSE | worker二重起動、配送失敗/backoff/dead、SSE切断・再接続・Last-Event-ID・範囲越境 |
-| 商品/在庫 | 価格変更後snapshot、部分予約を起こさない競合、全量rollback、在庫戻し監査 |
-| Security | CSRF/XSS/SQLi/SSRF、token再利用、権限解除race、secret log、画像偽装、CSV式注入 |
+| 商品/在庫 | 価格変更後snapshot、部分予約を起こさない競合、全量rollback、在庫戻しの元返金明細・累計・監査 |
+| Security | CSRF/XSS/SQLi/SSRF、token再利用、権限解除race/保存結果再送、商品GETと管理POSTの分離、QR用途別主体、招待受諾、secret log、画像偽装、CSV式注入 |
 | 境界/運用 | 0/負/30桁/桁超過、受付境界、現金DB非原子・結果不明、Outbox遅延、復旧/照合 |
 
 特に通信timeoutは「未成立」と断定しない。実金銭試験、負荷試験、法務/セキュリティ評価の実施前に合格と記録しない。
 
+### 20.1 レビュー指摘の検証計画
+
+以下は既存受入IDの合格条件を具体化する実装後の試験計画で、全件未実施。新しい受入IDや試験合格を追加したものではない。
+
+| 関連受入ID | 条件/操作 | 期待結果 |
+|---|---|---|
+| AT-010、AT-025、AT-029、AT-033 | 来場者がP01 GET・本人受付/B QR発行・A/C読取を行い、同じ主体でP01 POSTや別人/別用途のQRも操作 | 正当な閲覧/本人用途だけ許可、商品変更・他人/用途違い操作は拒否、残高/在庫に副作用なし |
+| AT-013～014 | 所属がない招待先本人がS02受諾、別人・期限切れ・発行者解除後・並行受諾も送信 | 有効な本人招待だけ1回所属/権限を作成、既存membershipを前提にしない。不正条件は拒否 |
+| AT-015、AT-038 | 成立した業務操作の同じキーを権限解除後に再送。権限を維持した主体でも受付終了後に同キーを再送 | 解除済み担当へ業務結果を返さず、現在の照会権限者だけ元結果へ復帰。再更新・受付終了による元成立の取消なし |
+| AT-042～044、AT-047～048 | 通常払戻しOFF/受付終了/失効後の返金専用額を精算用受付で交付。未交付取消・交付不明・再送・30日経過も確認 | refund_only→held→交付を台帳と一致させ、取消はrefund_onlyへ戻す。交付不明は拘束/調査維持、二重交付・支払可能額化・自動消去なし |
+| AT-046 | 1個返金に対し1個再販戻し後、同キー・別キーで再送。2端末の同時戻しや別店舗明細も指定 | 同キーは元結果、別キー/並行でも返金数量以内。StockMove合計＝restored_quantity、越境拒否、在庫/監査/射影の部分成立なし |
+| AT-030、AT-042～043 | 別キーのB要求を2店舗から同時作成。通常額/返金専用額の払戻しを別担当・別キーで同時開始 | B承認待ちと未完了現金払戻しは各1件。敗者409、拘束・在庫・台帳に部分更新なし。INVESTIGATING中も新規払戻し不可 |
+| AT-012、AT-014～016 | shop_id=NULLの同一grantを並行付与し、店舗scopeの重複・別店舗・解除後再付与も確認 | 同じscope/operationは1行、別店舗scopeは独立。再付与は同じ行の版更新＋監査、重複grantによる解除回避なし |
+| AT-013、AT-025、AT-031～032、AT-039、AT-050 | 期限直前にTxを開始し、対象行のロック待ちで期限を越える。QR/承認/見積/予約/招待の直前・同時・直後も比較 | ロック取得後のサーバー実時刻で境界拒否。QR更新と関連付け後180秒は独立、旧要求/予約延長なし、決済と解放は片方だけ成立 |
+
 ## 21. シーケンス図
 
-以下は主要フローの処理境界を表す。QR期限等レビュー中差分は実装を開始する前に要件正本との整合を確認する。
+以下は主要フローの処理境界を表す。承認済みCR-0001を適用し、金銭更新・照会認可・行ロック順・期限判定は6～9章と13章を共通規約とする。
 
 ### 21.1 ログイン
 ```mermaid
@@ -456,7 +558,8 @@ sequenceDiagram
   Shop->>API: payment request
   API->>DB: request CREATED
   User->>API: QR resolve / approve
-  API->>DB: BEGIN, request+wallet lock, reauthorize
+  API->>DB: BEGIN, current auth, wallet/inventory/request lock
+  API->>DB: check actual time after locks
   API->>DB: transaction+ledger+wallet+request+outbox
   API->>DB: COMMIT
   API-->>User: transaction result
@@ -470,8 +573,9 @@ sequenceDiagram
   participant API
   participant DB
   S->>API: recipient token + amount + key
-  API->>DB: BEGIN#59; lock both wallets by account_id
-  API->>DB: membership/transfer enabled/balance check
+  API->>DB: BEGIN, current authorization
+  API->>DB: lock both wallets by account_id, then token
+  API->>DB: actual time/token/transfer enabled/balance check
   API->>DB: transfer transaction + balanced ledger + both wallets + outbox
   API->>DB: COMMIT
   API-->>S: transaction result
@@ -484,14 +588,33 @@ sequenceDiagram
   participant Clerk
   participant API
   participant DB
-  U->>API: amount + approval
-  API->>DB: lock wallet, create hold PREPARED/HELD
-  DB-->>U: request id / held amount
-  Clerk->>API: confirm cash handoff
-  API->>DB: lock operation/hold, record CASH_HANDING
-  Clerk->>API: PAID or investigate
-  API->>DB: ledger settlement + release hold + audit
+  Clerk->>API: prepare identity/amount/source bucket
+  API->>DB: BEGIN, auth, wallet lock, one open cash operation
+  API->>DB: PREPARED + audit, COMMIT
+  API-->>U: amount/source bucket confirmation
+  U->>API: approve same amount/source bucket
+  API->>DB: BEGIN, auth, wallet/operation lock
+  alt source AVAILABLE
+    API->>DB: check normal reception, available to held
+  else source REFUND_ONLY
+    API->>DB: check settlement reception, refund_only to held
+  end
+  API->>DB: internal transaction + ledger + hold + audit + outbox
   API->>DB: COMMIT
+  API-->>Clerk: HELD, cash handoff permitted
+  Clerk->>API: start cash handoff
+  API->>DB: BEGIN, auth, operation/hold lock, CASH_HANDING + audit + outbox
+  API->>DB: COMMIT
+  Clerk->>API: confirm PAID or investigate
+  API->>DB: BEGIN, auth, wallet/operation/hold lock
+  alt PAID
+    API->>DB: held reduction + cash transaction + ledger + audit + outbox
+  else INVESTIGATING
+    API->>DB: preserve held amount + case + audit + outbox
+  end
+  API->>DB: COMMIT
+  API-->>U: committed state
+  Note over U,DB: Confirmed undelivered cancellation returns held amount to original source bucket
 ```
 
 ### 21.7 購入・取消・部分返金
@@ -502,15 +625,21 @@ sequenceDiagram
   participant API
   participant DB
   U->>API: checkout cart version
-  API->>DB: lock inventory#59; snapshot price#59; reserve all lines
+  API->>DB: BEGIN, auth, wallet/inventory lock, snapshot and reserve all lines
+  API->>DB: request + reservations + audit + outbox, COMMIT
   U->>API: approve payment request
-  API->>DB: lock request/wallet/reservations
-  API->>DB: order+lines+transaction+ledger+stock consume
+  API->>DB: BEGIN, auth, wallet/inventory/request/reservations lock
+  API->>DB: actual time and approval checks
+  API->>DB: order+lines+transaction+ledger+stock consume+audit+outbox
   API->>DB: COMMIT
   Shop->>API: fulfill transition
   Shop->>API: cancel/refund lines + reason
-  API->>DB: lock original transaction/lines#59; enforce cumulative cap
-  API->>DB: separate refund transaction + refund lines
+  API->>DB: BEGIN, auth, wallet/original transaction/lines lock, cumulative cap
+  API->>DB: separate refund transaction + refund lines + audit + outbox, COMMIT
+  Shop->>API: restore refund line quantity + resale confirmation + reason + key
+  API->>DB: BEGIN, auth, inventory/original transaction/refund lines lock
+  API->>DB: check remaining quantity, stock move + inventory + restored counter
+  API->>DB: audit + outbox + idempotent result, COMMIT
 ```
 
 ### 21.8 在庫予約
@@ -521,12 +650,15 @@ sequenceDiagram
   participant DB
   participant W as Expiry worker
   U->>API: checkout
-  API->>DB: lock inventory rows in product order
+  API->>DB: BEGIN, auth, wallet/inventory rows in common order
   API->>DB: reserve every line + request (180s)
-  W->>DB: lock expired reservations
+  API->>DB: COMMIT
+  W->>DB: BEGIN, inventory/request/reservation locks in common order
+  W->>DB: check actual time after locks
   DB-->>W: rows only if still RESERVED and expired
-  W->>DB: release stock reservation
-  Note over API,W: payment commit and expiry serialize on reservation row
+  W->>DB: expire request, release all stock reservations, audit + outbox
+  W->>DB: COMMIT
+  Note over API,W: Payment and expiry use the same inventory/request/reservation lock order
 ```
 
 ### 21.9 Outbox・SSE
@@ -600,6 +732,11 @@ sequenceDiagram
 | 物理テーブル群/共通日時 | 論理データモデル | 7章のUUID/FK/日時/CHECK案 | 実装可能なDDL案を示す | DDL化前にER/移行レビュー |
 | Isolation/lock順 | TX-03/04/06、LED-03/04 | READ COMMITTED+行lock+一意制約 | 明示した行単位競合制御 | 性能測定後変更、台帳原子性維持 |
 | Idempotency-Key長/hash | 冪等必須 | 1..128文字、canonical hash | 同一キー異内容拒否 | key scope変更は再送互換を壊す |
+| 結果再送の認可順序 | ROL-06、TX-03～05 | 保存結果返却前に現在の照会権限をTx内で確認 | 解除後の業務結果取得を防ぐ | 新規処理の期間条件を照会へ流用しない |
+| 同時件数・grant scope制約 | PAY-B04、CSH-01、ROL-03 | 7.4の状態別/NULL別部分一意索引 | 別キー・並行実行でも一意性を維持 | 最終enum・索引predicateを合わせる |
+| 返金専用交付の元区分保持 | REF-03、LED-01/03 | cash_operation/Holdに元区分、拘束・交付・解放は別台帳取引 | 精算用受付と正しい取消戻し先を実装 | 通常OFF/受付終了と精算受付を分離 |
+| 再販戻し数量の射影 | REF-04 | StockMoveの元返金明細、restored_quantityを同一Txで更新 | 別キーでも累計超過を防止 | 元金額・返金数量は不変、射影はStockMoveから再計算 |
+| 期限判定の時計 | QR/INV/TX/STFの期限 | 必要ロック後のclock_timestamp | ロック待ち中の期限超過を拒否 | 作成日時DEFAULT now()と判定時刻を区別 |
 | Outbox retry | DB+後続通知整合 | SKIP LOCKED/at-least-once/backoff | worker多重実行耐性 | consumer側重複排除を保持 |
 | SSE payload/heartbeat | SSE通知方針 | resource ID/versionのみ、20s heartbeat | 個人/金銭情報露出抑制 | Last-Event-ID保持期間を合わせる |
 | API TS型/JPY | 金額・API方針 | 代表型を提示、JPY固定 | 型検証の実装開始支援 | OpenAPIを正本化 |
@@ -611,11 +748,11 @@ sequenceDiagram
 
 | 観点 | 確認結果 |
 |---|---|
-| 基本設計整合 | 基本設計の数値・状態・期間・保存基準を保持。QR CR-0001、OpenAPI/DDL未決は確定扱いせず |
+| 基本設計整合 | 現行要件v0.2・承認済みCR-0001の期限/自動更新/再試行を反映。OpenAPI/DDL等の実装方式は補完案・未決として区別 |
 | 用語/ID | 要件ID・主要用語を維持。要件ID完全索引は基本設計36.3を参照 |
-| 金銭 | 台帳を正本、walletは射影、返金別取引、Hold分離、同一Tx/冪等/結果不明を記述 |
+| 金銭 | 台帳を正本、walletは射影、返金別取引、通常/返金専用額の拘束・交付・取消を区別。同一Tx/冪等/結果不明を記述 |
 | DB/API | 物理表・型・制約案と代表JSONを提示。最終DDL/OpenAPI一致は未検証・未作成 |
-| 状態/権限 | 主要状態機械とサーバー側認可・権限解除raceを記述。membership等一部enumは未決として残す |
+| 状態/権限 | 商品GET/管理POST・QR用途・参加/招待入口・再送照会の認可を分離。同時件数制約と再販戻し累計を明示。membership等一部enumは未決として残す |
 | セキュリティ/運用 | IDOR、CSRF、XSS、SQLi、SSRF、秘密ログ、CSV/画像制御、試験観点を記載。監査未実施 |
 
-次工程では、(1) U-01～U-20の担当と決定日を記録、(2) OpenAPI YAMLを作成して全API request/response・HTTP mapping・validationを唯一の契約化、(3) PostgreSQL DDL/migrationと台帳遅延制約・複合FKをレビュー、(4) 各金銭Txの統合/競合/結果不明試験を受入IDへ対応、(5) QRレビュー差分を正本要件へ反映または不採用決定、(6) 実測・法務・セキュリティ公開gateを別証跡で完了する。基本設計書は本作業で変更していない。
+次工程では、(1) U-01～U-20の担当と決定日を記録、(2) OpenAPI YAMLを作成して全API request/response・HTTP mapping・validationを唯一の契約化、(3) PostgreSQL DDL/migrationと台帳遅延制約・複合FK・7.4の部分一意索引をレビュー、(4) 20.1の認可/返金専用交付/再販戻し/同時件数/期限境界を含む金銭Txの統合・競合・結果不明試験を受入IDへ対応、(5) 承認済みCR-0001の前面表示/自動更新停止/独立期限/安全な新要求作成を実装・実機試験、(6) 実測・法務・セキュリティ公開gateを別証跡で完了する。参照する要件書・変更記録・基本設計・受入管理表と文書入口は承認済みmainのCR-0001反映内容に同期し、要件の新規変更や受入試験合格は追加していない。

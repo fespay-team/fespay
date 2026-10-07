@@ -4,8 +4,8 @@
 
 | 変更ID | 状態 | 理由 | 内容 | 影響要件ID | 関連受入試験ID | DB / API / UIへの影響 | 担当・期限 | Issue / PR | 決定者・決定日 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CR-0001 | レビュー中 | PayPay型の操作感に合わせるため | 短命QRの自動更新、QR表示期限と関連付け後承認期限の分離、A方式の安全な再生成を定義。B承認・商品見積・在庫予約を180秒、A方式QRと譲渡受取QRを300秒へ変更 | CHG-01、PAY-A02、PAY-B03、TRF-02、PRD-02、INV-01 | AT-031、AT-032、AT-039、AT-050 | tokenの期限・消費、payment_requestの独立期限、A方式再生成、表示カウントダウン・自動更新、在庫予約180秒 | 未割当・未定 | [Issue #4](https://github.com/fespay-team/fespay/issues/4) / [PR #3](https://github.com/fespay-team/fespay/pull/3) | 未決定・未決定 |
+| CR-0001 | 承認済み | 会場での操作時間を確保しつつ、QR表示期限と関連付け後の承認期限を分離して安全性を保つため | 受付・B方式QRは60秒で前面表示中だけ自動更新。A方式QRと譲渡受取QRは300秒。関連付け後承認・商品見積・在庫予約は180秒。期限切れ後は旧要求を延長せず、再検証して新要求を作る | CHG-01、PAY-A02、PAY-B02/03、TRF-02、PRD-02、INV-01、UI-03 | AT-025、AT-031、AT-032、AT-039、AT-050、AT-068 | tokenの期限・消費、payment_requestの独立期限、前面表示中だけの自動更新、A方式の条件付き再生成、残り時間・警告・安全な再試行、在庫予約180秒 | 各実装担当・実装時 | [Issue #4](https://github.com/fespay-team/fespay/issues/4) / [PR #3](https://github.com/fespay-team/fespay/pull/3) / [PR #5](https://github.com/fespay-team/fespay/pull/5) | natuki53・2026-09-30 |
 
-CR-0001の旧方式のv0.2レビュー案はGit commit `c7e8322c65c7d5e8310f0cc5d9f2f801998e302e`から再現できる。今後の変更内容・状態・決定は本表を正とする。
+CR-0001の旧方式のv0.2レビュー案はGit commit `c7e8322c65c7d5e8310f0cc5d9f2f801998e302e`から再現できる。承認済みの内容は現行要件書EPP-REQ-001 v0.2と本表を正とする。
 
 変更IDは `CR-0001` から連番で採番する。状態は「提案中」「レビュー中」「承認済み」「却下」のいずれかとし、承認前に確定仕様として扱わない。改訂と版固定スナップショットの手順は[要件定義README](README.md)に従う。
