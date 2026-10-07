@@ -470,7 +470,7 @@ sequenceDiagram
   participant API
   participant DB
   S->>API: recipient token + amount + key
-  API->>DB: BEGIN; lock both wallets by account_id
+  API->>DB: BEGIN#59; lock both wallets by account_id
   API->>DB: membership/transfer enabled/balance check
   API->>DB: transfer transaction + balanced ledger + both wallets + outbox
   API->>DB: COMMIT
@@ -502,14 +502,14 @@ sequenceDiagram
   participant API
   participant DB
   U->>API: checkout cart version
-  API->>DB: lock inventory; snapshot price; reserve all lines
+  API->>DB: lock inventory#59; snapshot price#59; reserve all lines
   U->>API: approve payment request
   API->>DB: lock request/wallet/reservations
   API->>DB: order+lines+transaction+ledger+stock consume
   API->>DB: COMMIT
   Shop->>API: fulfill transition
   Shop->>API: cancel/refund lines + reason
-  API->>DB: lock original transaction/lines; enforce cumulative cap
+  API->>DB: lock original transaction/lines#59; enforce cumulative cap
   API->>DB: separate refund transaction + refund lines
 ```
 
