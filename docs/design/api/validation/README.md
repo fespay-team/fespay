@@ -11,11 +11,12 @@
 python3 -m venv /tmp/fespay-api-contract-check
 /tmp/fespay-api-contract-check/bin/python -m pip install -r docs/design/api/validation/requirements.txt
 /tmp/fespay-api-contract-check/bin/python docs/design/api/validation/validate_contract.py
+/tmp/fespay-api-contract-check/bin/python docs/design/api/validation/validate_lint.py
 npx --yes @redocly/cli@2.60.0 lint docs/design/api/openapi.yaml
 git diff --check
 ```
 
-スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、全58論理API ID、更新操作のCookie/CSRF宣言、62キー付き操作のEVENT/GLOBAL別照会網羅も確認する。認証/秘密発行などキー記録を使わない操作は用途・単回消費の契約を確認する。289ケースの形式/状態確認はvalidate_contract.pyとcontract_cases.pyへ保存。
+スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、全58論理API ID、更新操作のCookie/CSRF宣言、62キー付き操作のEVENT/GLOBAL別照会網羅も確認する。認証/秘密発行などキー記録を使わない操作は用途・単回消費の契約を確認する。292ケースの形式/状態確認はvalidate_contract.pyとcontract_cases.pyへ保存。SSE例のevent/data/idを分解し、dataのJSON型とresource.changedのUUIDも確認する。
 
 ## 確認する異常系
 
@@ -33,4 +34,16 @@ git diff --check
 
 静的チェックはサーバーの認可・残高計算・元決済との一致・返金累計・同時実行・通信断・実機・性能を検証しない。特に、同じ元明細IDの重複、既返金累計超過、現在の担当/MFA、調査解決証跡、停止中の操作許可は実装後の受入試験で確認する。受入管理表を合格へ更新する根拠にしない。
 
-Redoclyの既知警告4件は、OSSライセンス未選定のlicense欠落、OAuth callbackが成功時302だけを返すための2xx警告と、SSE dataの2スキーマを拡張参照しているためのunused扱い。構造エラーや新しい警告は別途確認する。
+## ライセンス・Google認証・更新通知の検証
+
+既知だった4警告を次の方法で解消した。Redocly 2.60.0の結果はエラー0・警告0・無視0。[redocly.yaml](../../../../redocly.yaml)はrecommendedを継承し、[FesPayプラグイン](fespay-plugin.cjs)を読み込む。ignoreファイルは使用しない。
+
+| 対象 | 方針と検証 |
+| --- | --- |
+| 公開条件 | 当面は[権利留保](../../../../LICENSE)。OSS利用許諾は付与しない。OpenAPIのlicense.nameと独自識別子LicenseRef-FesPay-All-Rights-Reservedを記載。README・権利表示との一致も検証。info-license/info-license-strictはerror |
+| Google callback | ブラウザー遷移専用GETの成功は302。組込みoperation-2xx-responseをFesPayのoperation-success-responseへ置き換え、全操作で2xxを必須とし、この正確なパスのGETだけ302を要求する。operationId、必須LocationのReturnPath参照、Cache-Control: no-storeも検証。302欠落や形式だけの200追加はerror |
+| SSE更新通知 | HTTPのtext/event-streamはstringのまま維持。x-event-data-schemasをSchemaの型参照として登録し、参照解決・構造・未使用検出の対象にする。ResourceChanged/ResyncNoticeを標準のJSON応答として偽装しない。no-unused-componentsはerror |
+
+validate_lint.pyは同じCLIと設定で正本のエラー/警告/無視がすべて0であることを確認する。続いて一時ファイルだけを変更し、通常APIの200欠落・302置換、callbackの302欠落・200追加・Location欠落/任意文字列化・no-store欠落、SSEの参照切れ・使用参照削除、別の未使用型、license欠落の11件がすべてエラーになることを確認する。検証途中のAPI仕様をリポジトリへ書き戻さない。
+
+型拡張・専用ルールは[Redoclyの型拡張](https://redocly.com/docs/cli/custom-plugins/extended-types)と[ルール作成](https://redocly.com/docs/cli/custom-plugins/custom-rules)の仕組みを利用する。公開条件の記述には[OpenAPI 3.1のLicense Object](https://spec.openapis.org/oas/v3.1.0.html#license-object)を用いる。権利留保は当面の公開方針で、将来のOSS採用はチームの決定として別途反映する。

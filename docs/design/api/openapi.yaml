@@ -2,6 +2,9 @@ openapi: 3.1.0
 info:
   title: FesPay API（全領域の設計案）
   version: 0.3.0-draft
+  license:
+    name: All rights reserved（権利留保）
+    identifier: LicenseRef-FesPay-All-Rights-Reserved
   description: |-
     EPP-API-001。現行要件v0.2と基本/詳細設計に基づく全領域のレビュー前契約。
     認証、イベント・権限、チャージ・決済・譲渡・返金、商品・注文、集計/CSVを定義する。
@@ -1888,6 +1891,7 @@ paths:
           description: 安全な同一Origin画面へ遷移。LOGINではセッション設定。LINK/REAUTHENTICATEでは検証済みフローをサーバー保存し、GETで本人取得
           headers:
             Location:
+              required: true
               schema:
                 $ref: '#/components/schemas/ReturnPath'
             Cache-Control:

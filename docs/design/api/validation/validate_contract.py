@@ -1,5 +1,5 @@
 from pathlib import Path
-import re, sys
+import json, re, sys
 sys.dont_write_bytecode = True
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
@@ -70,6 +70,44 @@ def walk(obj):
     elif isinstance(obj, list):
         for value in obj: walk(value)
 walk(doc)
+# リポジトリの権利表示とAPIの公開条件を一致させる。
+license_id = 'LicenseRef-FesPay-All-Rights-Reserved'
+assert doc['info']['license'] == {'name': 'All rights reserved（権利留保）', 'identifier': license_id}
+assert f'SPDX-License-Identifier: {license_id}' in (root / 'LICENSE').read_text()
+assert '[権利留保（All rights reserved）](LICENSE)' in (root / 'README.md').read_text()
+# SSEはwire全体が文字列であり、各eventのdataだけを対応するJSON型で検証する。
+stream = doc['paths']['/v1/events/{event_id}/stream']['get']
+event_schemas = stream['x-event-data-schemas']
+assert event_schemas == {
+    'resource.changed': {'$ref': '#/components/schemas/ResourceChanged'},
+    'resync': {'$ref': '#/components/schemas/ResyncNotice'},
+}
+media = stream['responses']['200']['content']['text/event-stream']
+assert media['schema'] == {'type': 'string'}
+seen_events = set()
+for frame in re.split(r'\r?\n\r?\n', media['example'].strip()):
+    fields, data_lines = {}, []
+    for line in frame.splitlines():
+        if line.startswith(':'):
+            continue
+        key, _, value = line.partition(':')
+        value = value.removeprefix(' ')
+        if key == 'data':
+            data_lines.append(value)
+        else:
+            assert key not in fields, f'Duplicate SSE field: {key}'
+            fields[key] = value
+    assert fields.keys() <= {'id', 'event'}
+    event = fields['event']
+    assert event in event_schemas and data_lines
+    check(event_schemas[event]['$ref'].split('/')[-1], json.loads('\n'.join(data_lines)))
+    if event == 'resource.changed':
+        check('ResourceId', fields['id'])
+    else:
+        assert 'id' not in fields, 'resync must not invent an Outbox ID'
+    seen_events.add(event)
+assert seen_events == event_schemas.keys(), 'Every SSE event needs a wire example'
+print('Rights notice and SSE wire examples: passed')
 methods = {'get', 'post', 'put', 'patch', 'delete'}
 keyed_ids = {'EVENT': set(), 'GLOBAL': set()}
 api_ids = set()

@@ -13,6 +13,8 @@
 
 金銭・注文・在庫のTx内でOutboxを書き、コミット後に通知する。通知失敗で金銭成立を取り消さない。at-least-onceを前提とし、重複通知はidで排除する。残高・金額・氏名・メール・QR/招待トークン・冪等キーをdataへ含めない。型の正本はOpenAPIのResourceChanged/ResyncNotice。
 
+OpenAPI 3.1ではHTTPストリーム全体をstringとして記載し、event名とdataのJSON型をx-event-data-schemasで結び付ける。[検証用プラグイン](validation/fespay-plugin.cjs)がこの参照をSchemaとして認識するため、参照切れと実際の未使用型も検出できる。[契約チェック](validation/README.md)ではSSE形式の例を分解し、dataとidを対応型で確認する。拡張参照を扱わないツールを使う場合は、この対応を別途読み込む必要がある。
+
 | event | data・扱い |
 | --- | --- |
 | resource.changed（具体名の提案） | resource_type/resource_id/version。本人wallet、許可された取引/要求/現金/商品/在庫/カート/設定/権限/注文/CSV/失効runの変更対象を案内（enumはOpenAPI） |
