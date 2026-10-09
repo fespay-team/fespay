@@ -1,0 +1,679 @@
+{
+  "scope": "DB設計用SQL・検証器とAPI対応のローカル検証。実handler/運用DB/実装受入は対象外。",
+  "recorded_at_utc": "2026-10-09T12:18:49+00:00",
+  "validated_source_commit": "7c2ab97e8d0028382363739cce29b69d6448f25f",
+  "validated_files_sha256": {
+    "docs/design/database/sql/initial-schema-draft.sql": "186b41dc8781322e08d0a3406bddb23f9f64a9b16389ce5f6f7216c2e865e321",
+    "docs/design/database/validation/verify_schema.py": "2f7340e867d71810c885224b61abee6cb7e61ad8e832bf7ac7ccb6d7c437a651",
+    "docs/design/database/validation/check_contract.py": "6d95da0103f807aaded0c7691755690190b575be749f5929315d036ff28479ac",
+    "docs/design/database/validation/api-reference.json": "02ce50d73d496403c892c17fc23bcaef3baa0139865a704c4ac4fb66971b7e47",
+    "docs/design/database/validation/table-inventory.json": "0bbc7da86a86ee02879153c1b589f1d5301a7ccc318fbf4cb84108d8da44d874",
+    "docs/design/database/validation/requirements.txt": "0969da99a0bc2a1b71ed50584560f4588a37567ac63af3ddbaf3c4617ca5621a",
+    "docs/design/database/api-mapping.md": "44fbd84db7b75f0e4d324dc5b7c19d962e6f6836a4827aea6ce7e462ead39f74",
+    "docs/design/database/physical-schema.md": "b1ff3cec221bd1ac3f44e7f10318a468eeb3d54924f2874ad76fe25d085ba1f7",
+    "docs/design/database/er-diagram.md": "1b7f7d211b88b4cdd8e2d95413ff9b4e4b0712cb7c256deeeff55bd0a2cd8627",
+    "docs/design/database/design.md": "f4783392edc3aea78657f2998ccd1ee7f116019ffbe7dfd1dcd66631a3a409b7",
+    "docs/design/database/ledger.md": "f2a096a648de72b75a58d29677f9e233a529d0d5ae27c7a6ada04ee966982fe3"
+  },
+  "api_reference": {
+    "commit": "52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32",
+    "version": "0.4.0-draft",
+    "operation_count": 171,
+    "openapi_sha256": "059bf1834872c0f13fdbad19e755ed41b206bd6d479f5462a7b5f403a62536b3"
+  },
+  "postgresql": {
+    "server_version": "16.12",
+    "image": "postgres@sha256:0780ef0827baebe99b75a7feb7d97110d6ec1e4df3e5c4ec5b9a5143ef90ac3a",
+    "application_role": "fespay_app (NOLOGIN、DDL権限なし)",
+    "environment": "隔離container、network none、port公開なし、tmpfs、新規fixture、終了時削除",
+    "case_count": 104,
+    "passed_count": 104,
+    "two_connection_race_passed": true
+  },
+  "static_contract": {
+    "pinned_api_passed": true,
+    "origin_api_design_commit": "52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32",
+    "origin_api_design_passed": true,
+    "operation_count": 171,
+    "table_count": 55,
+    "checks": [
+      "operation対応",
+      "SQL/全列定義/ER/表一覧",
+      "所有表・列のenum",
+      "追加保存先・列",
+      "相対リンク"
+    ]
+  },
+  "mermaid": {
+    "parser_version": "12.1.0",
+    "block_count": 6,
+    "passed": true,
+    "visual_render_checked": false
+  },
+  "postgresql_cases": [
+    {
+      "case": "nonnegative_yen 0",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "nonnegative_yen 999999999999999999999999999999",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "nonnegative_yen -1",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "nonnegative_yen 1.5",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "nonnegative_yen 'NaN'",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "nonnegative_yen 'Infinity'",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "nonnegative_yen 1000000000000000000000000000000",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "positive_yen 1",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "positive_yen 0",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "positive_yen 'NaN'",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "ledger 31 digits",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "stock boundary 2147483647",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "stock boundary 2147483648",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "stock boundary -1",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "GLOBAL no event persists",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "GLOBAL duplicate",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "GLOBAL cannot contain event",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "EVENT needs event",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "EVENT duplicate",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "foreign-event idempotency key",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "zero ledger entries",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "single unbalanced entry",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "balanced complete transaction",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "foreign-event ledger wallet",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "transaction mutation",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "ledger mutation",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "ledger delete",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "cannot append balanced entries to committed transaction",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "policy mutation",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "wallet projection mismatch",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "app cannot drop constraints",
+      "passed": true,
+      "expected_sqlstate": "42501",
+      "actual_sqlstate": "42501"
+    },
+    {
+      "case": "different operation/key same payment",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "paid payer cannot change",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "one B awaiting",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "open cash refund shared across buckets",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "cash source fixed",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "hold origin and balanced bucket move",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "hold source mismatch",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "hold amount mismatch",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "NULL scope grant duplicate",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "grant permission shop mismatch",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "REQUESTED refund destination unknown",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "REQUESTED destination cannot be precommitted",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund basis must match original",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund uses original unit price",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund line exceeds original quantity",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund cumulative amount exceeds payment",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "ITEMS refund requires lines",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund original order mismatch",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund cannot change original facts",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund line from other order",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "cumulative quantity exceeds line below payment amount",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "one stock return",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "over quantity stock return",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "different key cannot return twice",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "restore projection must match",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund quantity immutable",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "refund line delete",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "inventory beyond 32bit",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "reservation exceeds onhand",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "QUEUED no completion deadline",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "READY needs completion plus 24h",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "slot 1 and 2 only",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "order matches payment shop and payer",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "order association can complete within same commit",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "order cannot reference different payment shop",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "order cannot reference different payment payer",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "AMOUNT payment cannot create item order",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "order cannot exist before successful payment",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "correction stores PENDING_RETURN",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "correction stores RETURNED",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "correction stores NOT_REQUIRED",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "correction stores INVESTIGATING",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "correction rejects unknown return state",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "no-return correction cannot become pending",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "returned correction cannot reopen",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "required cash return cannot be waived later",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "correction amount is immutable",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "investigating correction needs evidence",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "same-source resolved correction can record returned fact",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "unknown DB outcome cannot resolve return",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "other-source resolved case cannot resolve return",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "pending public email persists independently of login email",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "contact token needs dedicated address record",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "public email verification and consumption commit together",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "contact cannot verify before token consumption",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "contact consumption requires ownership record update",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "pending contact email cannot be swapped",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "contact binding cannot change",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "contact replay cannot change consumed timestamp",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "verified contact timestamp cannot change",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "expired contact cannot verify",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "revoked contact cannot verify",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "wrong email binding cannot persist",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "contact token and record owner must match",
+      "passed": true,
+      "expected_sqlstate": "23503",
+      "actual_sqlstate": "23503"
+    },
+    {
+      "case": "other-purpose token cannot verify email",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "same-owner address can be confirmed with a new token",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "one contact record per token",
+      "passed": true,
+      "expected_sqlstate": "23505",
+      "actual_sqlstate": "23505"
+    },
+    {
+      "case": "public contact address can be verified by another owner",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "pending contact cleanup removes address and token together",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "inventory CORRECTION zero delta",
+      "passed": true,
+      "expected_sqlstate": null,
+      "actual_sqlstate": null
+    },
+    {
+      "case": "inventory ADD zero delta",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "inventory WASTE zero delta",
+      "passed": true,
+      "expected_sqlstate": "23514",
+      "actual_sqlstate": "23514"
+    },
+    {
+      "case": "two-connection different-key stock return race",
+      "passed": true,
+      "winner": 0,
+      "loser": 3
+    }
+  ]
+}
