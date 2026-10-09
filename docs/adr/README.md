@@ -8,3 +8,4 @@
 | --- | --- | --- |
 | [0001](0001-repository-structure.md) | 単一リポジトリとドキュメント配置 | 初期構成に適用、チームレビュー未実施 |
 | [0002](0002-refund-api-workflows.md) | 現金払戻しの本人承認と購入返金申出の永続化を分離 | 提案、FE・BE・DBレビュー前 |
+| [0003](0003-api-authentication-and-command-boundaries.md) | 認証入口、短命秘密と業務MFA、決済共通化、キーscopeの具体化 | 提案、FE・BE・DBレビュー前 |

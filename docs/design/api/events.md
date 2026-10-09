@@ -5,7 +5,7 @@
 | 状態 / 担当 / レビュー者 | 下書き / natuki53 / 未割当 |
 | 更新日 | 2026-10-09 |
 | 関連要件ID / 受入試験ID | TX-04/05、NET-02/04、ROL-03/06、PWA-01/02 / AT-021、036～038、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / 未作成 |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
 
 ## 接続・通知
 
@@ -15,7 +15,7 @@
 
 | event | data・扱い |
 | --- | --- |
-| resource.changed（具体名の提案） | resource_type/resource_id/version。本人wallet、許可されたtransaction/payment_request/order/cash_refund/purchase_refundを案内 |
+| resource.changed（具体名の提案） | resource_type/resource_id/version。本人wallet、許可された取引/要求/現金/商品/在庫/カート/設定/権限/注文/CSV/失効runの変更対象を案内（enumはOpenAPI） |
 | resync | reason。保持範囲外・カーソル不明・安全な再開不可時に現在値を再取得 |
 
 resource.changedの`id:`にはOutbox UUIDを用いる。UUID自体を配信順として比較しない。versionはリソースごとの正の整数文字列案で、変更可能リソースにはversionを必須とする。追記のみのtransactionでは省略可。他リソース・別イベントのversionを比較しない。旧版/重複通知で表示状態を巻き戻さず、通知を受けたら現在の正本APIを再取得する。

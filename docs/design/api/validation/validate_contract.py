@@ -1,5 +1,6 @@
 from pathlib import Path
-import copy, json, re
+import re, sys
+sys.dont_write_bytecode = True
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 root = Path(__file__).resolve().parents[4]
@@ -70,31 +71,45 @@ def walk(obj):
         for value in obj: walk(value)
 walk(doc)
 methods = {'get', 'post', 'put', 'patch', 'delete'}
-post_ids = set()
+keyed_ids = {'EVENT': set(), 'GLOBAL': set()}
+api_ids = set()
 for path, path_item in doc['paths'].items():
     for method, op in path_item.items():
         if method not in methods:
             continue
         assert op['operationId'] not in operation_ids
         operation_ids.add(op['operationId'])
+        api_ids.update(op['x-api-ids'])
         params = path_item.get('parameters', []) + op.get('parameters', [])
         resolved = [doc['components']['parameters'][p['$ref'].split('/')[-1]] if '$ref' in p else p for p in params]
         assert set(re.findall(r'\{([^}]+)\}', path)) == {p['name'] for p in resolved if p['in'] == 'path'}
         for key in ['x-requirement-ids', 'x-acceptance-test-ids']:
             for identifier in op[key]:
                 assert identifier in req, identifier
-        if method == 'post':
-            post_ids.add(op['operationId'])
-            assert op['security'] == [{'sessionCookie': [], 'csrfToken': []}]
-            assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in resolved)
-            assert {'409', '202', '401', '403', '404', '422', '503'} <= op['responses'].keys()
+        if method != 'get':
+            assert op['security'] in [[{'sessionCookie': [], 'csrfToken': []}], [{'csrfToken': []}]]
+            assert {'409', '401', '403', '404', '422', '503'} <= op['responses'].keys()
             assert op['requestBody']['required']
             assert op['x-state-transitions']
+            if op.get('x-idempotency-scope'):
+                scope = op['x-idempotency-scope']
+                keyed_ids[scope].add(op['operationId'])
+                assert any(p['name'] == 'Idempotency-Key' and p['required'] for p in resolved)
+                assert '202' in op['responses']
+                assert ('{event_id}' in path) == (scope == 'EVENT')
 lookup = doc['paths']['/v1/events/{event_id}/transaction-results']['get']
 lookup_ops = next(p['schema']['enum'] for p in lookup['parameters'] if p.get('name') == 'operation')
-assert set(lookup_ops) == post_ids, 'Every defined write operation must be recoverable by its original key'
+assert set(lookup_ops) == keyed_ids['EVENT'], 'All event commands must be recoverable by their original keys'
+global_lookup = doc['paths']['/v1/operation-results']['get']
+assert set(next(p['schema']['enum'] for p in global_lookup['parameters'] if p.get('name') == 'operation')) == keyed_ids['GLOBAL']
+basic = (root / 'docs/design/basic-design.md').read_text()
+logical_ids = set(re.findall(r'^\| ([A-Z]\d{2}) \|', basic, re.M))
+assert api_ids == logical_ids, ('Uncovered logical APIs', logical_ids - api_ids, 'Unexpected', api_ids - logical_ids)
+coverage = (root / 'docs/design/api/coverage.md').read_text()
+assert all(f'`{identifier}`' in coverage for identifier in operation_ids)
+assert all(re.search(r'^\| ' + identifier + r' \|', coverage, re.M) for identifier in logical_ids)
 # 新規文書と変更した入口の相対リンク確認。
-for file in list((root / 'docs/design/api').glob('*.md')) + [root / 'docs/design/README.md', root / 'docs/adr/README.md', root / 'docs/adr/0002-refund-api-workflows.md', root / 'docs/design/api/validation/README.md']:
+for file in list((root / 'docs/design/api').rglob('*.md')) + [root / 'docs/design/README.md', root / 'docs/adr/README.md'] + list((root / 'docs/adr').glob('000*.md')):
     for target in re.findall(r'\]\(([^)]+)\)', file.read_text()):
         if '://' in target or target.startswith('#'): continue
         assert (file.parent / target.split('#')[0]).exists(), (file, target)
@@ -174,5 +189,8 @@ check('RequestResult', {'status':'UNKNOWN', 'resource':purchase, 'checked_at':ts
 for resource_type in ['cash_refund','purchase_refund']:
     check('ResourceChanged', {'resource_type':resource_type, 'resource_id':rid}, False)
     check('ResourceChanged', {'resource_type':resource_type, 'resource_id':rid, 'version':'2'})
+from contract_cases import run_cases
+run_cases(check)
 print(f'Total schema examples and edge cases: {checks} passed')
-print(f'Write security declarations and result lookup coverage: {len(post_ids)} operations passed')
+print(f'Keyed command security and result lookup coverage: {sum(map(len, keyed_ids.values()))} operations passed')
+print(f'Basic design logical API coverage: {len(logical_ids)} IDs passed')

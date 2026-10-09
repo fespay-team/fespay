@@ -2,51 +2,37 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 文書ID / 状態 | EPP-API-001 / 下書き（v0.2、共通・照会・返金の部分契約） |
-| 担当 / レビュー者 | natuki53 / 未割当（利用するFE・BE・DB担当） |
+| 文書ID / 状態 | EPP-API-001 / 下書き（v0.3、全領域の契約初稿・レビュー前） |
+| 担当 / レビュー者 | natuki53 / FE・BE・DB担当（未割当） |
 | 更新日 | 2026-10-09 |
-| 関連要件ID | API-01～05、MNY-01/02、WAL-01～03、TX-01～06、CSH-01～06、REF-01～04、EXP-03、SEC-01、ROL-02/03/06、NET-02/04、PWA-01/02 |
-| 受入試験ID | AT-021～024、026～027、034～038、041～047、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)（提案） |
+| 関連要件 / 受入試験 | ACC/JOIN/EVT/CFG/STF/ROL、MNY/WAL/TX/LED、CHG/PAY/TRF/CSH/REF/EXP、PRD/INV/ORD/RPT、SEC/PRV/API/DAT、GOV/LEG/REL / operationごとのIDはOpenAPI、対応表はcoverage.md |
+| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)、[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
 
-## 目的・対象範囲
+## 目的・成果物
 
-DB設計と並行して、FEとBEが共有するHTTP契約を作成する。[現行要件v0.2](../../requirements/event_payment_requirements.md)、[基本設計第14章](../basic-design.md)、[詳細設計第11～15章](../detailed-design.md)を基準とする。既存設計で未決のパス・型・状態語彙を具体化する案であり、要件変更や承認を意味しない。
+DB設計と並行し、FEとBEが共有するHTTP契約を作成する。[要件v0.2](../../requirements/event_payment_requirements.md)、[基本設計第14章](../basic-design.md)、[詳細設計](../detailed-design.md)を基準に、全58論理API IDを168 HTTP操作へ具体化した。共通・照会・返金から、認証・管理・チャージ・決済・譲渡・商品/注文・集計まで初稿が揃った。型/状態/認可/再送の追加判断はレビュー案で、要件やADRの承認・実装完成を意味しない。
 
 | ファイル | 内容 |
 | --- | --- |
-| [openapi.yaml](openapi.yaml) | 要求・応答・権限・エラーの正本候補。残高・取引照会・SSE・現金払戻し・購入返金の17操作 |
-| [conventions.md](conventions.md) | 認証・認可、金額、冪等性、エラー、ページング、時刻 |
-| [refunds.md](refunds.md) | 払戻しの本人承認・拘束・現金交付と、購入返金の申出・確定・復帰 |
-| [events.md](events.md) | SSEのイベント型、再接続、正本再取得 |
-| [db-handoff.md](db-handoff.md) | DB担当と確認する境界・整合性・未決事項 |
-| [validation](validation/README.md) | スキーマの異常入力・状態と参照の再実行可能な静的チェック |
+| [openapi.yaml](openapi.yaml) | 入力/応答・権限・状態・キー・エラー、168操作/234スキーマ |
+| [coverage.md](coverage.md) | 全58論理ID→operationId索引、内部worker境界、確定前レビュー項目 |
+| [conventions.md](conventions.md) | Cookie/CSRF、金額、版、GLOBAL/EVENTキー、結果復帰、ページング、エラー |
+| [authentication.md](authentication.md) | メール/Google・MFA、イベント/参加/設定、招待/権限/owner交代、停止/完了 |
+| [payments-and-cash.md](payments-and-cash.md) | A/B/C共通決済、チャージ、譲渡、訂正、現金調査/返却/実査、失効 |
+| [refunds.md](refunds.md) | 未使用チャージの現金払戻しと、店舗決済の購入返金 |
+| [products-orders-reports.md](products-orders-reports.md) | 商品/在庫戻し/画像、cart/注文/受取/取消、集計/CSV/照合 |
+| [events.md](events.md) | SSE通知型、現在認可、再接続/正本取得 |
+| [db-handoff.md](db-handoff.md) | DB担当へ渡す不変条件・自然一意・型/Tx/保管境界 |
+| [validation](validation/README.md) | 形式/状態境界・参照・論理ID/キー照会網羅の再実行手順 |
 
-HTTPフィールドの追加・変更はOpenAPIで行い、本文へJSON定義を重複管理しない。DBのテーブル・索引・マイグレーションはDB担当の成果物を正本とする。
+HTTPフィールドの正本候補はOpenAPI。DBのテーブル/索引/DDLはDB担当の成果物を正本とし、この作業では変更しない。
 
-## 設計の進捗
+## 設計段階と検証
 
-| 領域 / 基本設計API ID | 状態・次の作業 |
-| --- | --- |
-| 共通契約 | 初回案作成。今回追加した7更新operationのキー照会を定義。Cookie実名・CSRF方式は未決 |
-| T01/W01 残高 | 同じスキーマを使う本人向け2パスの初回案。統合可否はFEと確認 |
-| T03 取引ID・本人の要求キー照会 | 更新コマンド結果も照会する案へ拡張。コマンド成功と払戻し/返金完了を区別 |
-| T04/W02 履歴 | T04の本人用一覧のみ初回案。業務一覧、W02の履歴表示統合、検索条件は未設計 |
-| N01 SSE | 現金払戻し・購入返金の通知型を追加。注文系通知の詳細は注文契約と同時に追加 |
-| H01～H04、C02の払戻し照会 | 準備/本人承認/交付開始/完了・取消・調査/引継ぎと一覧・詳細の初稿。現金調査の解決契約は後続 |
-| R02 購入返金 | 金額/商品数量の申出保存・確定・一覧・詳細の初稿。申出保存と確定の分割はADR-0002の提案 |
-| A01～A05、E01～E10、S01～S04 | 未設計。認証基盤の具体設定とロール・設定操作を追加 |
-| Q01～Q04、T02/T05、C01/C03～C05、F01～F03 | 未設計。チャージ・決済・譲渡・訂正・現金調査/照合と、C02のチャージ照会を追加 |
-| P01～P05、O01～O05、R01/R03～R05 | 未設計。商品・在庫（返金商品の再販戻し含む）・注文・CSV/集計を追加 |
+全領域の公開API案は作成済み。62のキー付きコマンドは元operationIdとキーで結果照会できる。秘密を発行する認証/QR/招待/受取操作は単回消費/再発行の別契約。T02汎用金銭操作を専用操作に分解し、Q02/O01の共通確定で二重決済を防ぐ設計とした。
 
-## 検証方法
+289件のサンプル/異常入力/状態ケース、全ローカル参照/パラメータ/要件・AT ID/文書リンク、58論理IDの対応と62キー操作の照会網羅を静的確認。Redoclyは構造エラー0、既知警告4（ライセンス未選定、302 callbackの2xxなし、SSE拡張参照2件）。
 
-OpenAPIの構造・参照と129件のサンプル/異常入力/状態ケースを[検証手順](validation/README.md)で確認した。金額の30桁境界、他イベント/店舗の認可、キーからの復帰、停止中の既取引照会を設計レビューする。検証結果はPRへ記録する。アプリとDBは未実装で、認可・同時実行・通信断を含む受入試験は未実施のまま。
+実アプリ/DBは未実装。認可、実残高、同時実行、切断、認証基盤統合、実機、性能の受入試験は未実施。API案とDB型/enum、GLOBALキー、snapshot/Outbox、失効worker認証、具体値の採択は[レビュー項目](coverage.md)を残している。担当間レビューとADR採択を得て契約を確定する。
 
-## 未決事項・影響
-
-Cookie・CSRF設定、一覧のカーソル実装、将来の金銭操作名・取引種別、購入返金の申出状態/分割、現金調査解決契約、SSEの再開位置と保持期間をFE/BE/DB担当と決定する。OpenAPI内のCookie名・CSRFヘッダーは明示的な仮置き/提案で、実装やクライアント生成への利用前に解消する。最終判断は関連PR/ADRへ記録する。
-
-## 承認記録
-
-承認者・日付・PR：未記入。
+承認者・日付・PR：未記入。Issue #7/PR #8はレビュー前のまま。

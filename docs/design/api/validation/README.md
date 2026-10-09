@@ -15,7 +15,7 @@ npx --yes @redocly/cli@2.60.0 lint docs/design/api/openapi.yaml
 git diff --check
 ```
 
-スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、更新操作のCookie/CSRF/冪等キー宣言とキー照会operationの網羅も確認する。
+スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、全58論理API ID、更新操作のCookie/CSRF宣言、62キー付き操作のEVENT/GLOBAL別照会網羅も確認する。認証/秘密発行などキー記録を使わない操作は用途・単回消費の契約を確認する。289ケースの形式/状態確認はvalidate_contract.pyとcontract_cases.pyへ保存。
 
 ## 確認する異常系
 
@@ -25,8 +25,12 @@ git diff --check
 | TX-05 / AT-037/038 | 成立/最終拒否/処理中/結果不明の必須・禁止フィールド。コマンド成功に中間リソースを返せるが、未確認結果へ成功リソースを混在させない |
 | CSH-01～04 / AT-042～044 | 本人承認の額・元区分・版・true確認、交付済みと未交付確認の混在拒否、状態ごとの拘束/交付/解放ID必須 |
 | REF-01～03 / AT-045～047 | 金額/商品数量入力の分離、単価・返金先・支払者の入力拒否、未完了返金へ成立取引ID/返金先を返さない |
+| ACC/SEC/STF / AT-001～007/011～016 | PW境界、safe return_path、認証手段の型、TOTP/code、grantのrole/shop/register組合せ |
+| PAY/CHG/TRF / AT-025～040 | A/B/C入力の分離、本人承認true、現金受領/返却状態と成立ID、固定譲渡入力 |
+| INV/ORD / AT-046/049～053 | 再販戻しの元明細/true確認、32bit/50明細/数量境界、受取証明、全取消の返金参照 |
+| RPT / AT-055～057 | 集計31桁超と負純額、CSV READYの必須part/件数/期限、期限切れのdownload参照禁止 |
 | NET-04 / AT-037/062 | 変更可能リソースのSSE version必須、秘匿対象の存在を理由に含めない再同期型 |
 
 静的チェックはサーバーの認可・残高計算・元決済との一致・返金累計・同時実行・通信断・実機・性能を検証しない。特に、同じ元明細IDの重複、既返金累計超過、現在の担当/MFA、調査解決証跡、停止中の操作許可は実装後の受入試験で確認する。受入管理表を合格へ更新する根拠にしない。
 
-Redoclyの既知警告3件は、OSSライセンス未選定のlicense欠落と、SSE dataの2スキーマを拡張参照しているためのunused扱い。構造エラーや新しい警告は別途確認する。
+Redoclyの既知警告4件は、OSSライセンス未選定のlicense欠落、OAuth callbackが成功時302だけを返すための2xx警告と、SSE dataの2スキーマを拡張参照しているためのunused扱い。構造エラーや新しい警告は別途確認する。
