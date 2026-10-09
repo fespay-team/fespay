@@ -15,7 +15,7 @@
 
 | event | data・扱い |
 | --- | --- |
-| resource.changed（具体名の提案） | resource_type/resource_id/version。本人wallet、許可されたtransaction/payment_request/orderを案内 |
+| resource.changed（具体名の提案） | resource_type/resource_id/version。本人wallet、許可されたtransaction/payment_request/order/cash_refund/purchase_refundを案内 |
 | resync | reason。保持範囲外・カーソル不明・安全な再開不可時に現在値を再取得 |
 
 resource.changedの`id:`にはOutbox UUIDを用いる。UUID自体を配信順として比較しない。versionはリソースごとの正の整数文字列案で、変更可能リソースにはversionを必須とする。追記のみのtransactionでは省略可。他リソース・別イベントのversionを比較しない。旧版/重複通知で表示状態を巻き戻さず、通知を受けたら現在の正本APIを再取得する。
@@ -24,7 +24,7 @@ heartbeatは20秒のコメント行という詳細設計の補完案を維持す
 
 ## 再接続・再取得
 
-初回接続と再接続後は、残高・結果確認中の要求・表示中の注文などを正本から再取得する。EventSourceのLast-Event-IDから再開できる場合は許可対象だけを再送する。ネイティブEventSourceで任意ヘッダーを指定することは前提にせず、ページ再読込/新端末では新規接続＋正本再取得とする。
+初回接続と再接続後は、残高・結果確認中の要求・払戻し/購入返金の申出・表示中の注文などを正本から再取得する。EventSourceのLast-Event-IDから再開できる場合は許可対象だけを再送する。ネイティブEventSourceで任意ヘッダーを指定することは前提にせず、ページ再読込/新端末では新規接続＋正本再取得とする。
 
 未知のUUID、他イベント/権限外のID、保持範囲外は対象の存在を明かさない共通reason CURSOR_UNAVAILABLEでresyncを送る。カーソルIDから権限を推定せず、保持中の通知も現在の認可で絞る。resyncは業務変更を行わない制御通知で、偽のOutbox UUIDを付けない。
 

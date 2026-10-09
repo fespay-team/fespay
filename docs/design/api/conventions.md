@@ -18,7 +18,7 @@ HTTPS、UTF-8 JSON、`/v1`を使用する。業務フィールドは既存詳細
 
 ## 認証・認可
 
-Better AuthのセッションCookieを用いる。Cookie実名・属性の具体値、OAuthのコールバック、CSRFトークン発行/検証方式は認証設計と同時に決める。OpenAPIの`__SESSION_COOKIE_TBD__`は仮置きであり、本番設定名ではない。CookieはHttpOnly/Secure/SameSiteを適用し、更新系にはCSRF・Origin検証、CORSは許可Originのみを適用する。
+Better AuthのセッションCookieを用いる。Cookie実名・属性の具体値、OAuthのコールバック、CSRFトークン発行/検証方式は認証設計と同時に決める。OpenAPIの`__SESSION_COOKIE_TBD__`は仮置きであり、本番設定名ではない。X-CSRF-Tokenをヘッダーとする案を宣言したが、具体発行/検証は未確定。CookieはHttpOnly/Secure/SameSiteを適用し、更新系にはCSRF・Origin検証、CORSは許可Originのみを適用する。
 
 認証主体はサーバーで取得する。本人残高・本人履歴へ任意のaccount_idを入力させない。イベント、必要な店舗、対象の本人所有または現在の業務照会権限を要求ごとに検証する。業務で処理した事実やキーを知っていることは照会権限にならない。権限解除後の担当者に業務結果を返さず、現在の権限者が取引IDで照会する。兼務者も本人操作と業務操作を区別する。
 
@@ -36,18 +36,20 @@ Better AuthのセッションCookieを用いる。Cookie実名・属性の具体
 
 金銭/在庫確定の更新は`Idempotency-Key`必須。1～128文字のASCII可視文字（空白を除く）は詳細設計の補完案を引き継ぐ。クライアントは送信前にevent・operation・キー・承認内容を保存し、応答不明でも同じ組を維持する。未送信要求を自動実行キューに保存しない。
 
-一意の論理scopeは`(actor_account_id, event_id, operation, key)`。同一内容は同じ結果、同キー異内容は409 IDEMPOTENCY_CONFLICT。操作名は将来の金銭更新operationIdと対応させる案で、正式語彙は更新契約と同時に固定する。キーや認証秘密を通常ログへ記録しない。canonical JSONの対象・正規化は更新APIとDB設計で決め、同じ本文でも別の操作・親リソースを誤って同一視しない。
+一意の論理scopeは`(actor_account_id, event_id, operation, key)`。operationはOpenAPIのoperationIdと対応する案で、今回の7更新操作を照会enumへ含める。同一内容は同じ効果/ID、同キー異内容は409 IDEMPOTENCY_CONFLICT。キーや認証秘密を通常ログへ記録しない。要求hashはmethod/event/operationId/パスの対象ID/検証済み本文を含め、別対象への同キー流用も409とする。canonical JSONの具体正規化はDB/実装設計で決める。
+
+版付き更新の同キー成功済み再送は、現在の照会認可と内容hash照合の後に元の効果/IDを返す。古いexpected_versionの再検証で既成立を拒否しない。応答には現在のresource状態を返し、過去のPREPARED/HELDを現在の状態として巻き戻さない。新規キーの更新では現在の版・操作権限/MFA・停止/受付を必ず検証する。
 
 取引ID未受信でも照会できるよう、GETのキー照会を提案する。キーはURLへ含めずヘッダーで渡し、eventはパス、operationはクエリで指定する。認証主体と現在の対象照会権限を確認後、正本の永続結果だけを読む。自分が発行した業務要求でも権限解除後は返さない。
 
 | 照会状態 | 意味・次の操作 |
 | --- | --- |
-| SUCCEEDED | 永続成立を確認。同じ取引ID・額・時刻を表示 |
-| REJECTED | 永続的な最終拒否が確認済み。理由を表示し、必要なら本人が新要求へ進む |
+| SUCCEEDED | 元コマンドの効果が永続成立。transaction、または現在の払戻し/購入返金resourceを返す |
+| REJECTED | 永続的な最終拒否が確認済み。理由を表示し、必要なら権限を持つ操作者が新要求へ進む |
 | PENDING | 処理中の記録あり。同じキーで照会を続ける |
 | UNKNOWN | 記録未検出等で成立/未成立を断定できない。新キーの自動再処理をしない |
 
-これらは照会応答の状態で、DB取引状態や支払要求の状態を置き換えない。SUCCEEDEDには成立取引を、REJECTEDには最終拒否理由を必須とし、PENDING/UNKNOWNには成立取引を含めない。キー未検出の404を未成立証明にしない。DB障害で正本を確認できなければ503を返し、UNKNOWNやREJECTEDを捏造しない。
+これらはコマンド照会応答の状態で、DB取引状態や支払要求の状態を置き換えない。SUCCEEDEDにはtransaction/resourceのどちらか一方、REJECTEDには最終拒否理由を必須とし、PENDING/UNKNOWNには成功リソースを含めない。prepare成功のPREPAREDや返金申出保存成功のREQUESTEDは金銭返還完了ではない。現金交付はresource.status=PAID、購入返金はresource.status=SUCCEEDEDと対応する取引IDを確認する。キー未検出の404を未成立証明にしない。DB障害で正本を確認できなければ503を返し、UNKNOWNやREJECTEDを捏造しない。
 
 10秒応答なしは「結果確認中」。最初の30秒は2秒間隔、その後5秒間隔、2分後は手動照会も提示し未確認一覧へ保持する。バックグラウンドでは不要なポーリングを停止する。同キー再送時も現在の認可を再確認し、DB内部再試行は同じキーで最大3回。HTTPエラー・端末タイムアウトだけで未成立としない。
 
@@ -66,7 +68,7 @@ Better AuthのセッションCookieを用いる。Cookie実名・属性の具体
 | 503 | DEPENDENCY_UNAVAILABLE / DB_UNAVAILABLE：正本へ接続回復後に同じキーで照会 |
 | 500 | INTERNAL_ERROR：request_idで調査。成立/未成立を断定しない |
 
-code/message/request_id/retryableと任意のcurrent_state_or_queryを共通型とする。retryableはその要求を再試行できる意味で、新キーによる金銭処理の許可ではない。処理中応答の202/409と業務更新の最終HTTPマッピングは後続契約で決める。内部SQL/stack/資格情報を返さない。
+code/message/request_id/retryableと任意のcurrent_state_or_queryを共通型とする。retryableはその要求を再試行できる意味で、新キーによる金銭処理の許可ではない。今回の払戻し/購入返金更新は処理中・結果不明202、業務競合409とし、照会先を返す。その他の業務更新の最終HTTPマッピングは後続契約で決める。内部SQL/stack/資格情報を返さない。
 
 ## 検証・承認
 

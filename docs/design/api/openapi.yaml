@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: FesPay API（設計開始用・部分契約）
-  version: 0.1.0-draft
+  version: 0.2.0-draft
   description: |
     EPP-API-001。現行要件v0.2と基本/詳細設計に基づくレビュー前の案。
-    本人残高・本人履歴・取引照会・要求キー照会・SSEのみを先行定義する。
-    金銭更新API、認証入口、管理系、注文/商品/CSV契約は未定義。
-    Cookie名とoperation/取引種別の語彙は未決。実装・型生成前に解消する。
+    本人残高・取引照会・SSEに加え、現金払戻しと購入返金の更新/照会を定義する。
+    チャージ/決済/譲渡、認証入口、管理系、注文/商品/CSV契約は後続設計。
+    Cookie名/CSRF方式と取引種別は未決。実装・型生成前に解消する。
   x-status: draft-partial
   x-owner: natuki53
   x-updated-at: '2026-10-09'
@@ -23,6 +23,10 @@ tags:
     description: 正本の取引と要求結果の照会
   - name: Notifications
     description: 正本の再取得を促す通知
+  - name: CashRefunds
+    description: 未使用残高と返金専用額の現金払戻し
+  - name: PurchaseRefunds
+    description: 元の店舗決済に対する購入取消・部分返金
 paths:
   /v1/events/{event_id}/wallet:
     parameters:
@@ -180,9 +184,9 @@ paths:
     get:
       operationId: getMyTransactionResultByKey
       tags: [Transactions]
-      summary: 本人が送信した要求キーから結果を照会（追加パス案）
+      summary: 本人が送信したコマンドの要求キーから結果を照会（追加パス案）
       description: |
-        取引IDを受信できなかった場合の読取専用照会。
+        取引IDや払戻し/返金申出IDを受信できなかった場合の読取専用コマンド結果照会。
         認証主体/event/operation/Idempotency-Keyで正本の永続結果を検索する。
         結果を返す前に現在の本人/対象業務照会権限を再検証する。
         記録未検出はUNKNOWN。REJECTEDは永続的最終拒否が確認できる場合のみ。
@@ -196,15 +200,16 @@ paths:
         - name: operation
           in: query
           required: true
-          description: 金銭更新operationIdに対応させる案。正式語彙は更新契約で定義し、未知の操作は422。
+          description: 本版で定義した更新operationId。将来の操作追加時に拡張し、未知の操作は422。
           schema:
             type: string
             minLength: 1
             maxLength: 100
             pattern: '^[a-z][A-Za-z0-9]*$'
+            enum: [prepareCashRefund, approveCashRefund, startCashRefundHandover, completeCashRefund, handoverCashRefund, createPurchaseRefundRequest, executePurchaseRefund]
       responses:
         '200':
-          description: 照会が成功。HTTP 200自体は金銭成立を意味せず、bodyのstatusで判定する
+          description: 照会が成功。HTTP 200やコマンドSUCCEEDEDだけで金銭成立とせず、transactionまたはresourceの完了状態と取引IDを確認する
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -287,6 +292,891 @@ paths:
           $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refund-requests:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    post:
+      operationId: prepareCashRefund
+      tags:
+      - CashRefunds
+      summary: 受付が現金払戻しを準備する
+      description: 受付用QRから本人を特定し、相手・照合番号・額・元区分を確認してPREPAREDを保存する。対象区分の十分な残高を確認するが、まだ拘束・現金交付しない。本人はこの準備を照会してapproveする。AVAILABLEは通常受付ON/期間、REFUND_ONLYは精算用受付を検証。通常/返金専用額を合わせ本人/eventで未完了1件。QRの検証/消費と準備・監査・Outboxは同一Tx。同キー再送はQR再消費や新規準備をしない。
+      x-api-ids:
+      - H01
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-041
+      - AT-042
+      - AT-043
+      - AT-044
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 主催者または現金払戻し権限者。担当業務認証/受付と対象本人を検証
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepareCashRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - なし -> PREPARED
+      responses:
+        '201':
+          $ref: '#/components/responses/CashRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    get:
+      operationId: listCashRefunds
+      tags:
+      - CashRefunds
+      summary: 払戻し準備・未完了・結果を一覧取得
+      description: 本人はmineのみ。assignedは現在の担当かつ払戻し照会権限、eventは主催者/払戻し管理権限。created_at DESC, cash_refund_id DESC。INVESTIGATINGを含む未完了を保持。scope/status/cursorの条件をカーソルに束縛し毎回再認可。
+      x-api-ids:
+      - H01
+      - H04
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-043
+      - AT-044
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 本人当事者、現在の担当、主催者/払戻し管理者をscopeで分離
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefundPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - name: scope
+        in: query
+        schema:
+          type: string
+          enum:
+          - mine
+          - assigned
+          - event
+          default: mine
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - PREPARED
+          - HELD
+          - CASH_HANDING
+          - PAID
+          - CANCELLED
+          - INVESTIGATING
+  /v1/events/{event_id}/refund-requests/{cash_refund_id}:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: cash_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    get:
+      operationId: getCashRefund
+      tags:
+      - CashRefunds
+      summary: 払戻しの現在状態を照会
+      description: 新規処理停止/受付終了後も、本人または現在の担当/管理照会権限で既処理を照会できる。旧担当者は業務照会不可。PAIDだけが現金交付の完了記録。INVESTIGATINGは再交付の根拠にしない。
+      x-api-ids:
+      - C02
+      - H01
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-043
+      - AT-044
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 本人当事者または現在の払戻し担当/管理照会権限
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refund-requests/{cash_refund_id}/approve:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: cash_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    post:
+      operationId: approveCashRefund
+      tags:
+      - CashRefunds
+      summary: 本人が払戻し内容を承認し残高を拘束
+      description: 準備の対象本人のみ。amount/balance_source/expected_versionが保存内容と一致することを検証。担当の現在の権限・業務認証、受付、本人状態、対象残高を全必要ロック後に再検証する。元区分減算、held加算、Hold/内部振替取引/台帳/監査/Outboxを単一Tx。担当者や主催者による代理承認は禁止。金額変更は未交付取消後の新準備。
+      x-api-ids:
+      - H01
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-034
+      - AT-035
+      - AT-042
+      - AT-044
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 対象本人のみ。業務権限で本人承認を代行しない
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveCashRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 本人の通常セッション。一般来場者MFAは任意
+      x-state-transitions:
+      - PREPARED -> HELD
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refund-requests/{cash_refund_id}/cash-handing:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: cash_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    post:
+      operationId: startCashRefundHandover
+      tags:
+      - CashRefunds
+      summary: 担当者が現金交付を開始する
+      description: 現在の担当本人と最新業務認証を検証し、HELDと額/元区分/拘束記録を確認してCASH_HANDINGを保存する。まだPAIDにしない。現金を渡す前にCOMMIT済みの拘束と固定額を画面で確認。開始済み手続の受付終了は安全な継続を妨げない。緊急停止中の未交付現金移動は不可、既交付の完了記録と区別する。
+      x-api-ids:
+      - H02
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-042
+      - AT-043
+      - AT-044
+      - AT-058
+      - AT-059
+      x-authorization: 主催者または現金払戻し権限者。担当業務認証/受付と対象本人を検証。現在のassigned_operator_account_id本人のみ
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashRefundVersionInput'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - HELD -> CASH_HANDING
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refund-requests/{cash_refund_id}/complete:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: cash_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    post:
+      operationId: completeCashRefund
+      tags:
+      - CashRefunds
+      summary: 交付済み・未交付取消・調査を記録する
+      description: PAIDはCASH_HANDINGまたはINVESTIGATINGで交付済み事実を確認した場合のみ。拘束減算/現金交付取引/台帳/監査/Outboxは一括。CANCELLEDはPREPARED/HELD/CASH_HANDING/INVESTIGATINGで未交付が確定した場合のみ。拘束があれば元区分へ同額解放し返金専用額をavailableに変えない。INVESTIGATINGはHELD/CASH_HANDINGから交付不明/現金不足等を記録し拘束維持。調査からのPAID/取消はresolution_case_id必須で、同じ払戻しの解決済み現金調査・理由・交付事実との一致をサーバー検証。PAID/CANCELLEDは終端で訂正は別取引。停止中も既交付の完了記録/未交付取消/調査を許可。
+      x-api-ids:
+      - H03
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-036
+      - AT-037
+      - AT-038
+      - AT-043
+      - AT-044
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 主催者または現金払戻し権限者。担当業務認証/受付と対象本人を検証。現在の担当のみ、調査解決は主催者/払戻し管理者の記録も検証
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteCashRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - CASH_HANDING -> PAID
+      - INVESTIGATING -> PAID (交付済み確認)
+      - PREPARED/HELD/CASH_HANDING/INVESTIGATING -> CANCELLED (未交付確認)
+      - HELD/CASH_HANDING -> INVESTIGATING
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refund-requests/{cash_refund_id}/handover:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: cash_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    post:
+      operationId: handoverCashRefund
+      tags:
+      - CashRefunds
+      summary: 払戻しの担当を引き継ぐ
+      description: 主催者または払戻し管理者が未完了処理を引き継ぐ。新担当の現在のevent/払戻し権限を検証。旧/新担当・理由・時刻を監査し版を更新する。金額/元区分/拘束/交付状態は変えず、交付不明を再交付可能にしない。新担当は次の操作時に自身の業務追加認証を満たす。
+      x-api-ids:
+      - H04
+      x-requirement-ids:
+      - CSH-01
+      - CSH-02
+      - CSH-03
+      - CSH-04
+      - CSH-05
+      - CSH-06
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - REF-03
+      - WAL-02
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-043
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 主催者または払戻し管理権限者。通常担当の権限だけでは引継ぎ不可
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoverCashRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - PREPARED/HELD/CASH_HANDING/INVESTIGATING -> 同じ状態 (担当/版更新)
+      responses:
+        '200':
+          $ref: '#/components/responses/CashRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refunds:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    post:
+      operationId: createPurchaseRefundRequest
+      tags:
+      - PurchaseRefunds
+      summary: 購入返金の申出を永続保存
+      description: 金額会計はAMOUNT、商品明細会計はITEMSのみ。元決済種別/所属/本人を検証し、商品明細は元の単価から返金額を計算する。支払者や返金先を入力させず、変更できない申出としてREQUESTEDを保存。残高/売上/在庫は変えない。累計枠は予約せずexecute時に再検証。緊急停止中も権限内の申出記録は可。これが返金成功ではない。返金不能時に残す申出を先に保存する分割案（ADR-0002）。
+      x-api-ids:
+      - R02
+      x-requirement-ids:
+      - REF-01
+      - REF-02
+      - REF-03
+      - REF-04
+      - EXP-03
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-045
+      - AT-046
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 主催者、または元決済のevent/shopに現在の購入返金権限を持つ者。業務追加認証
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePurchaseRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - なし -> REQUESTED
+      responses:
+        '201':
+          $ref: '#/components/responses/PurchaseRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    get:
+      operationId: listPurchaseRefunds
+      tags:
+      - PurchaseRefunds
+      summary: 購入返金の未完了・成立・拒否を一覧取得
+      description: 本人は元支払者のmineのみ。shopはshop_id必須で現在の対象店舗返金照会権限、eventは主催者/返金管理範囲。created_at DESC, purchase_refund_id
+        DESC。現在の認可とカーソル条件を検証。未完了を返金済み表示しない。
+      x-api-ids:
+      - R02
+      x-requirement-ids:
+      - REF-01
+      - REF-02
+      - REF-03
+      - REF-04
+      - EXP-03
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-045
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 本人または現在の対象event/shopの返金照会権限
+      responses:
+        '200':
+          $ref: '#/components/responses/PurchaseRefundPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - name: scope
+        in: query
+        schema:
+          type: string
+          enum:
+          - mine
+          - shop
+          - event
+          default: mine
+      - name: shop_id
+        in: query
+        description: scope=shopなら必須。対象eventとの所属を照合
+        schema:
+          $ref: '#/components/schemas/ResourceId'
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - REQUESTED
+          - INVESTIGATING
+          - SUCCEEDED
+          - REJECTED
+  /v1/events/{event_id}/refunds/{purchase_refund_id}:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: purchase_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    get:
+      operationId: getPurchaseRefund
+      tags:
+      - PurchaseRefunds
+      summary: 購入返金の正本状態を照会
+      description: 元支払者または現在の対象event/shop返金照会権限で読む。REQUESTED/INVESTIGATINGは未完了。SUCCEEDEDだけが残高返金成立でrefund_transaction_idを返す。停止/通常払戻しOFF/受付終了だけで既記録を非表示にしない。
+      x-api-ids:
+      - R02
+      x-requirement-ids:
+      - REF-01
+      - REF-02
+      - REF-03
+      - REF-04
+      - EXP-03
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-045
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 元支払者または現在の対象event/shop返金照会権限
+      responses:
+        '200':
+          $ref: '#/components/responses/PurchaseRefund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/events/{event_id}/refunds/{purchase_refund_id}/execute:
+    parameters:
+    - $ref: '#/components/parameters/EventId'
+    - name: purchase_refund_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    post:
+      operationId: executePurchaseRefund
+      tags:
+      - PurchaseRefunds
+      summary: 保存済み購入返金を確定する
+      description: REQUESTED/INVESTIGATINGを再検証し、wallet/元決済/明細/refundを共通順でロック。元支払者・同event・同shop・元単価・既返金累計額/数量を確認し、超過は409
+        REFUND_LIMIT_EXCEEDEDで一円も部分成立させない。通常支払期間内かつ残高有効ならAVAILABLE、販売終了/失効後ならREFUND_ONLYへサーバー判定で加算。通常払戻しOFFを理由に拒否しない。緊急停止下の価値移動は主催者の精算専用再開後のみ。売上減算/返金明細/別取引/台帳/監査/Outboxを同一Tx。元決済不変、在庫は自動復元しない。技術障害は503/202で元申出を保持し、未成立が確定した業務拒否だけREJECTEDを永続化する。金額等の申出変更は禁止。
+      x-api-ids:
+      - R02
+      x-requirement-ids:
+      - REF-01
+      - REF-02
+      - REF-03
+      - REF-04
+      - EXP-03
+      - TX-03
+      - TX-04
+      - TX-05
+      - SEC-01
+      - API-01
+      - API-02
+      - API-03
+      - API-04
+      - ROL-03
+      - ROL-06
+      x-acceptance-test-ids:
+      - AT-021
+      - AT-036
+      - AT-037
+      - AT-038
+      - AT-045
+      - AT-046
+      - AT-047
+      - AT-058
+      - AT-059
+      x-authorization: 主催者、または元決済のevent/shopに現在の購入返金権限を持つ者。業務追加認証
+      security:
+      - sessionCookie: []
+        csrfToken: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutePurchaseRefund'
+      x-idempotency-scope:
+      - actor_account_id
+      - event_id
+      - operationId
+      - key
+      x-request-hash-inputs:
+      - method
+      - event_id
+      - operationId
+      - path_resource_id
+      - validated_body
+      x-mfa: 業務追加認証：最大8時間・無操作30分。金額の都度確認
+      x-state-transitions:
+      - REQUESTED/INVESTIGATING -> SUCCEEDED
+      - REQUESTED/INVESTIGATING -> REJECTED (最終拒否記録)
+      - REQUESTED -> INVESTIGATING (原因記録可能な技術障害)
+      responses:
+        '200':
+          $ref: '#/components/responses/PurchaseRefund'
+        '202':
+          $ref: '#/components/responses/CommandPending'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     sessionCookie:
@@ -294,6 +1184,12 @@ components:
       in: cookie
       name: __SESSION_COOKIE_TBD__
       description: Better AuthセッションCookie。実名・具体属性は未決で、実装/型生成前に確定する
+      x-unresolved: true
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: CSRFトークンヘッダーの提案。Cookie/Origin併用と具体発行/検証は認証設計で確定
       x-unresolved: true
   parameters:
     EventId:
@@ -446,15 +1342,31 @@ components:
     SucceededResult:
       type: object
       additionalProperties: false
-      required: [status, transaction, checked_at]
+      required:
+      - status
+      - checked_at
       properties:
         status:
           type: string
           const: SUCCEEDED
         transaction:
           $ref: '#/components/schemas/Transaction'
+        resource:
+          oneOf:
+          - $ref: '#/components/schemas/CashRefund'
+          - $ref: '#/components/schemas/PurchaseRefund'
         checked_at:
           $ref: '#/components/schemas/UtcDateTime'
+      oneOf:
+      - required:
+        - transaction
+        properties:
+          transaction: {}
+      - required:
+        - resource
+        properties:
+          resource: {}
+      description: 元コマンドの効果が永続成立。resourceの現在状態を返す。PREPARED/REQUESTED等は返金/現金交付完了ではない
     RejectedResult:
       type: object
       additionalProperties: false
@@ -528,7 +1440,7 @@ components:
       properties:
         resource_type:
           type: string
-          enum: [wallet, transaction, payment_request, order]
+          enum: [wallet, transaction, payment_request, order, cash_refund, purchase_refund]
         resource_id:
           $ref: '#/components/schemas/ResourceId'
         version:
@@ -536,7 +1448,7 @@ components:
       if:
         properties:
           resource_type:
-            enum: [wallet, payment_request, order]
+            enum: [wallet, payment_request, order, cash_refund, purchase_refund]
       then:
         properties:
           version:
@@ -550,6 +1462,569 @@ components:
         reason:
           type: string
           enum: [CURSOR_UNAVAILABLE, RECONNECT_REQUIRED]
+    Reason:
+      type: string
+      minLength: 1
+      maxLength: 1000
+      pattern: \S
+      description: 理由。長さは補完案。空白のみは拒否し、通常ログへ全文を出さない
+    PrepareCashRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - identity_token
+      - amount
+      - balance_source
+      properties:
+        identity_token:
+          type: string
+          minLength: 1
+          writeOnly: true
+          description: 受付用60秒QRの不透明token。用途/event/subject/期限をサーバー照合。生値を保存・通常ログ出力しない
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        balance_source:
+          type: string
+          enum:
+          - AVAILABLE
+          - REFUND_ONLY
+    ApproveCashRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - amount
+      - balance_source
+      - approved
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        balance_source:
+          type: string
+          enum:
+          - AVAILABLE
+          - REFUND_ONLY
+        approved:
+          type: boolean
+          const: true
+    CashRefundVersionInput:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+    CompleteCashRefundPaid:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - outcome
+      - cash_delivered_confirmed
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        outcome:
+          type: string
+          const: PAID
+        cash_delivered_confirmed:
+          type: boolean
+          const: true
+        resolution_case_id:
+          $ref: '#/components/schemas/ResourceId'
+    CompleteCashRefundCancelled:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - outcome
+      - cash_not_delivered_confirmed
+      - reason
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        outcome:
+          type: string
+          const: CANCELLED
+        cash_not_delivered_confirmed:
+          type: boolean
+          const: true
+        reason:
+          $ref: '#/components/schemas/Reason'
+        resolution_case_id:
+          $ref: '#/components/schemas/ResourceId'
+    CompleteCashRefundInvestigating:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - outcome
+      - reason
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        outcome:
+          type: string
+          const: INVESTIGATING
+        reason:
+          $ref: '#/components/schemas/Reason'
+    CompleteCashRefund:
+      oneOf:
+      - $ref: '#/components/schemas/CompleteCashRefundPaid'
+      - $ref: '#/components/schemas/CompleteCashRefundCancelled'
+      - $ref: '#/components/schemas/CompleteCashRefundInvestigating'
+    HandoverCashRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - new_operator_account_id
+      - reason
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        new_operator_account_id:
+          $ref: '#/components/schemas/ResourceId'
+        reason:
+          $ref: '#/components/schemas/Reason'
+    CashRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - cash_refund_id
+      - event_id
+      - target
+      - assigned_operator_account_id
+      - amount
+      - currency
+      - balance_source
+      - status
+      - version
+      - created_at
+      - checked_at
+      properties:
+        cash_refund_id:
+          $ref: '#/components/schemas/ResourceId'
+        event_id:
+          $ref: '#/components/schemas/ResourceId'
+        target:
+          type: object
+          additionalProperties: false
+          required:
+          - account_id
+          - display_name
+          - verification_code
+          properties:
+            account_id:
+              $ref: '#/components/schemas/ResourceId'
+            display_name:
+              type: string
+              minLength: 1
+              maxLength: 40
+            verification_code:
+              type: string
+              minLength: 1
+              description: 本人と受付の照合用表示番号。認証秘密ではなく権限や現金交付の根拠にしない
+        assigned_operator_account_id:
+          $ref: '#/components/schemas/ResourceId'
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        currency:
+          type: string
+          const: JPY
+        balance_source:
+          type: string
+          enum:
+          - AVAILABLE
+          - REFUND_ONLY
+        status:
+          type: string
+          enum:
+          - PREPARED
+          - HELD
+          - CASH_HANDING
+          - PAID
+          - CANCELLED
+          - INVESTIGATING
+        version:
+          $ref: '#/components/schemas/Version'
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        checked_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        hold_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        cash_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        release_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        cancellation_reason:
+          $ref: '#/components/schemas/Reason'
+        cash_not_delivered_confirmed:
+          type: boolean
+          const: true
+        investigation_reason:
+          $ref: '#/components/schemas/Reason'
+        case_id:
+          $ref: '#/components/schemas/ResourceId'
+      allOf:
+      - if:
+          properties:
+            status:
+              type: string
+              enum:
+              - HELD
+              - CASH_HANDING
+              - PAID
+        then:
+          required:
+          - hold_transaction_id
+          properties:
+            hold_transaction_id: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: PAID
+        then:
+          required:
+          - cash_transaction_id
+          properties:
+            cash_transaction_id: {}
+        else:
+          not:
+            required:
+            - cash_transaction_id
+            properties:
+              cash_transaction_id: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: PREPARED
+        then:
+          not:
+            anyOf:
+            - required:
+              - hold_transaction_id
+              properties:
+                hold_transaction_id: {}
+            - required:
+              - release_transaction_id
+              properties:
+                release_transaction_id: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: CANCELLED
+        then:
+          required:
+          - cancellation_reason
+          - cash_not_delivered_confirmed
+          if:
+            required:
+            - hold_transaction_id
+            properties:
+              hold_transaction_id: {}
+          then:
+            required:
+            - release_transaction_id
+            properties:
+              release_transaction_id: {}
+          properties:
+            cancellation_reason: {}
+            cash_not_delivered_confirmed: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: INVESTIGATING
+        then:
+          required:
+          - investigation_reason
+          - case_id
+          - hold_transaction_id
+          properties:
+            investigation_reason: {}
+            case_id: {}
+            hold_transaction_id: {}
+      - if:
+          required:
+          - release_transaction_id
+          properties:
+            release_transaction_id: {}
+        then:
+          properties:
+            status:
+              type: string
+              const: CANCELLED
+    CashRefundPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - next_cursor
+      - checked_at
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/CashRefund'
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+        checked_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    PurchaseRefundLineInput:
+      type: object
+      additionalProperties: false
+      required:
+      - original_order_line_id
+      - quantity
+      properties:
+        original_order_line_id:
+          $ref: '#/components/schemas/ResourceId'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 999
+          description: 元購入数量・既返金数量もサーバー検証。999は既存補完案
+    CreateAmountRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - original_transaction_id
+      - basis
+      - amount
+      - reason
+      properties:
+        original_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        basis:
+          type: string
+          const: AMOUNT
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        reason:
+          $ref: '#/components/schemas/Reason'
+    CreateItemsRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - original_transaction_id
+      - basis
+      - lines
+      - reason
+      properties:
+        original_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        basis:
+          type: string
+          const: ITEMS
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PurchaseRefundLineInput'
+          description: 同じ元明細IDの重複は422。元決済の単価でサーバー計算
+        reason:
+          $ref: '#/components/schemas/Reason'
+    CreatePurchaseRefund:
+      oneOf:
+      - $ref: '#/components/schemas/CreateAmountRefund'
+      - $ref: '#/components/schemas/CreateItemsRefund'
+    PurchaseRefundLine:
+      type: object
+      additionalProperties: false
+      required:
+      - refund_line_id
+      - original_order_line_id
+      - quantity
+      - unit_price
+      - amount
+      properties:
+        refund_line_id:
+          $ref: '#/components/schemas/ResourceId'
+        original_order_line_id:
+          $ref: '#/components/schemas/ResourceId'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 999
+        unit_price:
+          $ref: '#/components/schemas/PositiveMoney'
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+    ExecutePurchaseRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - confirmed
+      properties:
+        expected_version:
+          $ref: '#/components/schemas/Version'
+        confirmed:
+          type: boolean
+          const: true
+    PurchaseRefund:
+      type: object
+      additionalProperties: false
+      required:
+      - purchase_refund_id
+      - event_id
+      - shop_id
+      - original_transaction_id
+      - payer_account_id
+      - basis
+      - amount
+      - currency
+      - status
+      - reason
+      - version
+      - created_at
+      - checked_at
+      properties:
+        purchase_refund_id:
+          $ref: '#/components/schemas/ResourceId'
+        event_id:
+          $ref: '#/components/schemas/ResourceId'
+        shop_id:
+          $ref: '#/components/schemas/ResourceId'
+        original_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        payer_account_id:
+          $ref: '#/components/schemas/ResourceId'
+        basis:
+          type: string
+          enum:
+          - AMOUNT
+          - ITEMS
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        currency:
+          type: string
+          const: JPY
+        status:
+          type: string
+          enum:
+          - REQUESTED
+          - INVESTIGATING
+          - SUCCEEDED
+          - REJECTED
+        reason:
+          $ref: '#/components/schemas/Reason'
+        version:
+          $ref: '#/components/schemas/Version'
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        checked_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PurchaseRefundLine'
+        credited_to:
+          type: string
+          enum:
+          - AVAILABLE
+          - REFUND_ONLY
+        refund_transaction_id:
+          $ref: '#/components/schemas/ResourceId'
+        investigation_code:
+          type: string
+          minLength: 1
+        rejection_code:
+          type: string
+          minLength: 1
+      allOf:
+      - if:
+          properties:
+            basis:
+              type: string
+              const: ITEMS
+        then:
+          required:
+          - lines
+          properties:
+            lines: {}
+        else:
+          not:
+            required:
+            - lines
+            properties:
+              lines: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: SUCCEEDED
+        then:
+          required:
+          - credited_to
+          - refund_transaction_id
+          properties:
+            credited_to: {}
+            refund_transaction_id: {}
+        else:
+          not:
+            anyOf:
+            - required:
+              - credited_to
+              properties:
+                credited_to: {}
+            - required:
+              - refund_transaction_id
+              properties:
+                refund_transaction_id: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: INVESTIGATING
+        then:
+          required:
+          - investigation_code
+          properties:
+            investigation_code: {}
+      - if:
+          properties:
+            status:
+              type: string
+              const: REJECTED
+        then:
+          required:
+          - rejection_code
+          properties:
+            rejection_code: {}
+    PurchaseRefundPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - next_cursor
+      - checked_at
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PurchaseRefund'
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+        checked_at:
+          $ref: '#/components/schemas/UtcDateTime'
   responses:
     Wallet:
       description: 同じ正本時点で確認した残高3区分
@@ -618,6 +2093,61 @@ components:
             $ref: '#/components/schemas/Error'
     Unavailable:
       description: DEPENDENCY_UNAVAILABLE / DB_UNAVAILABLE。正本確認不能。未成立/最終拒否として扱わない
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CashRefund:
+      description: CashRefundの正本。更新応答はCOMMIT後。状態が完了するまで金銭交付/返金済みと表示しない
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CashRefund'
+    CashRefundPage:
+      description: CashRefundPageの正本。更新応答はCOMMIT後。状態が完了するまで金銭交付/返金済みと表示しない
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CashRefundPage'
+    PurchaseRefund:
+      description: PurchaseRefundの正本。更新応答はCOMMIT後。状態が完了するまで金銭交付/返金済みと表示しない
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PurchaseRefund'
+    PurchaseRefundPage:
+      description: PurchaseRefundPageの正本。更新応答はCOMMIT後。状態が完了するまで金銭交付/返金済みと表示しない
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PurchaseRefundPage'
+    Conflict:
+      description: INVALID_STATE / VERSION_CONFLICT / IDEMPOTENCY_CONFLICT / INSUFFICIENT_BALANCE / TOKEN_EXPIRED
+        / TOKEN_CONSUMED / REFUND_LIMIT_EXCEEDED。状態と照会先を現在の権限内で返す。部分更新なし
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CommandPending:
+      description: REQUEST_IN_PROGRESS / RESULT_UNKNOWN。元キーで照会する。202は返金/現金交付完了の意味ではない
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
