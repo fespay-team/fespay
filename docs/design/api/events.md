@@ -5,7 +5,7 @@
 | 状態 / 担当 / レビュー者 | 下書き / natuki53 / 未割当 |
 | 更新日 | 2026-10-09 |
 | 関連要件ID / 受入試験ID | TX-04/05、NET-02/04、ROL-03/06、PWA-01/02 / AT-021、036～038、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / PR作成後に記録 / 未作成 |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / 未作成 |
 
 ## 接続・通知
 

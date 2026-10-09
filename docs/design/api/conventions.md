@@ -6,7 +6,7 @@
 | 更新日 | 2026-10-09 |
 | 関連要件ID | API-01～05、MNY-01/02、WAL-01～03、TX-01～06、ROL-02/03/06、CFG-03/04、PWA-01/02 |
 | 受入試験ID | AT-021～024、026～027、034～038、042、047、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / PR作成後に記録 / 未作成 |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / 未作成 |
 
 ## 基準・HTTP
 

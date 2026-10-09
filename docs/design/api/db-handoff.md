@@ -5,7 +5,7 @@
 | 状態 / 担当 / レビュー者 | 下書き / API：natuki53、DB：チームメンバー（アカウント未確認） / 未割当 |
 | 更新日 | 2026-10-09 |
 | 関連要件ID / 受入試験ID | API-01～04、DAT-01～03、LED-01～06、WAL-01～03、TX-01～06、ROL-03/06 / AT-021～024、026～027、035～038、042、047、055、058 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / PR作成後に記録 / 未作成 |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / 未作成 |
 
 ## 分担・根拠
 
