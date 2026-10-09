@@ -360,6 +360,19 @@ updated_at timestamptz NOT NULL DEFAULT now(),
 created_at timestamptz NOT NULL DEFAULT now()
 ```
 
+### contact_email_verifications
+
+```sql
+id uuid PRIMARY KEY,
+account_id uuid NOT NULL,
+token_id uuid NOT NULL UNIQUE,
+email citext NOT NULL CHECK(char_length(email) BETWEEN 1 AND 254),
+verified_at timestamptz,
+version positive_version NOT NULL DEFAULT 1,
+updated_at timestamptz NOT NULL DEFAULT now(),
+created_at timestamptz NOT NULL DEFAULT now()
+```
+
 ### products
 
 ```sql
@@ -686,7 +699,7 @@ product_id uuid NOT NULL,
 kind text NOT NULL CHECK(kind IN ('ADD','WASTE','CORRECTION','RETURN_TO_STOCK')),
 refund_line_id uuid,
 idempotency_id uuid NOT NULL,
-delta bigint NOT NULL CHECK(delta BETWEEN -2147483647 AND 2147483647 AND delta<>0),
+delta bigint NOT NULL CHECK(delta BETWEEN -2147483647 AND 2147483647 AND (delta<>0 OR kind='CORRECTION')),
 reason text NOT NULL,
 actor_account_id uuid NOT NULL,
 CHECK((kind='RETURN_TO_STOCK' AND refund_line_id IS NOT NULL AND delta>0) OR (kind<>'RETURN_TO_STOCK' AND refund_line_id IS NULL)),
@@ -740,9 +753,10 @@ kind text NOT NULL CHECK(kind IN ('CHARGE_REVERSAL','CASH_REFUND_CORRECTION')),
 amount positive_yen NOT NULL,
 balance_source text NOT NULL CHECK(balance_source IN ('AVAILABLE','REFUND_ONLY')),
 transaction_id uuid NOT NULL UNIQUE,
-cash_returned_confirmed boolean NOT NULL DEFAULT false,
+cash_return_status text NOT NULL CHECK(cash_return_status IN ('PENDING_RETURN','RETURNED','NOT_REQUIRED','INVESTIGATING')),
 reason text NOT NULL,
 resolution_case_id uuid,
+CHECK(kind='CHARGE_REVERSAL' OR cash_return_status='NOT_REQUIRED'),
 UNIQUE(event_id, id),
 version positive_version NOT NULL DEFAULT 1,
 updated_at timestamptz NOT NULL DEFAULT now(),
@@ -1001,3 +1015,11 @@ SQLは台帳均衡・wallet射影・注文合計・返金の元注文/単価/数
 `refunds.destination_bucket`はREQUESTED/INVESTIGATING/REJECTEDでNULL、SUCCEEDEDで必須。返金先は申出時に先決めせずexecute時の期間/有効性で選ぶ。`order_lines.refunded_quantity/restored_quantity`の公開値は成立refund_linesの集計から算出する。元商品/単価/数量は不変、restored_quantityだけ在庫戻しで更新する。
 
 APIのGrantは権限集合のID。grantsはrole/現在状態/版、grant_permissionsは同scope/permissionの一意な正本、grant_registersはレジ範囲を表す。再付与は既存行/版を更新し、grant_permissionsの重複行を増やさない。旧発行者の権限解除は受諾済みgrantを連鎖解除しない。
+
+`cash_corrections.cash_return_status`はCorrectionの4状態と同じ語彙で保存し、返却済み/返却不要は終端とする。`cash_return_required`入力は初期PENDING_RETURN/NOT_REQUIREDへ変換し、boolだけから再推定しない。内部kind=CASH_REFUND_CORRECTIONは公開kind=REVERSE_UNDELIVERED_CASH_REFUNDへ変換し、現金返却状態はNOT_REQUIRED。INVESTIGATING→RETURNEDは同じ訂正に対する解決済み案件の事実/DB成立証跡を検査し、返却事実の本人確認と監査はhandlerが担う。
+
+`contact_email_verifications`は公開連絡先の依頼/所有確認をtokenごとに保存する。ログインメールを持つaccount_profilesとは別にメール本文を保管するため、tokenのみのconfirmContactEmailでもemail/verified_atを返せる。FKはtokenのsubjectと本人を一致させる。binding_hashはSQLのcontact_email_bindingを使い、`FESPAY_CONTACT_EMAIL_V1`、改行、UUIDの標準文字列表現、改行、保存メール本文をUTF-8へ変換したSHA-256。依頼メールは正規化/転記せず保存し、所有確認の検索はcitextで比較する。token目的/bindingとverified_at=consumed_at、期限前/未失効をCOMMIT時に検証し、メール差替えと確認日時の書換えを拒否する。同じアドレスの新tokenによる確認記録は複数保持でき、同tokenは1行・同じ確認日時へ復帰する。メール到達、本人/未消費/実時刻の再検証はhandler責務。未確認期限切れ・退会後の個人情報削除はtokenと同一Txで行う。
+
+`orders_payment_scope_fk`は注文の店舗/支払者を元支払要求へ結び付ける。注文の遅延検査はITEMS/SUCCEEDEDと元要求額/決済額/明細合計の一致を確認する。`stock_moves.delta`はCORRECTIONだけ0を許し、同値訂正も理由付き履歴を残す。APIのquantityはabs(delta)、Stockは現在の同一Tx射影で返す。
+
+内部/公開語彙の変換：accountsのSUSPENDEDはAccount.statusのLOCKEDへ対応し、DELETEDは認証/本人照会を拒否する内部保持状態。tokensのRECEPTION/RECIPIENTはQrToken.purposeのRECEPTION_IDENTITY/TRANSFER_RECIPIENTへ対応する。API DTOへ物理enumを無変換で返さない。

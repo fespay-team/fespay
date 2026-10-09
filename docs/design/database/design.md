@@ -18,6 +18,9 @@
 | 支払要求1成立取引/注文、自然由来ごとの取引一意 | Q02/O01の異経路でも二重引落ししない |
 | grantを集合＋permission/registerの子行へ分離 | APIのrole/permissions/register_idsとscope一意を両立する |
 | 個人情報をaccount_profilesへ分離 | 精算済み退会30日後の削除と7年保持IDを分離する |
+| contact_email_verificationsに指定メールと確認日時を保存 | tokenのみの確認要求から公開連絡先を取得し、ログインidentityとは別に本人の所有確認を保持する |
+| cash_corrections.cash_return_statusを4状態で保存 | 返却待ち/返却済み/返却不要/調査中を再読込でも混同しない |
+| 注文と支払要求の店舗/支払者を複合FKで結合 | 同event内の別店舗/別本人への誤った注文関連付けを拒否する |
 | 現金調査の型別FK、実査/訂正/釣銭記録 | 利用者の現金処理を伴わない実査にも案件を関連付ける |
 | Cart、TransferRequest、全取消、受取保留、失効run/item | 再読込/通信断後も保存済み状態へ戻る |
 | report snapshot rows、export parts/slots、SSE replay position | 時点/分割/2件上限/安全な再開を保持する |
@@ -30,11 +33,19 @@ Better Authがidentity/session/PW/TOTP/回復コード/OAuth/challengeを所有�
 
 QR/招待/連絡先確認/受取秘密はハッシュ・用途・主体・対象・期限・単回消費で保管する。CONTACT_EMAILは本人と連絡先hashをbinding_hashに束縛する。JSON/監査/Outbox/冪等結果にtoken生値・PW・TOTP・回復コード・session cookieを保存しない。外部認証フローは基盤保管。更新可能なJSONはAPI schemaで検証し、同じ行の版で排他する。
 
+公開連絡先の確認依頼はtokensとcontact_email_verificationsを同一Txで作成する。専用表に本人/指定メール/token IDを保存し、binding_hashはcontact_email_binding(account_id,email)で計算する。tokenだけの確認要求はハッシュからこの表を取得でき、ログインメールを転記しない。確認はtokenと所有確認行を共通順でロックし、本人/用途/binding/実時刻/未消費を検証してconsumed_atとverified_atを同じ確認時刻で保存する。遅延triggerは用途・メールbinding・確認と消費の一致・期限前・未失効を検査する。同tokenの再確認は既存の確認日時へ復帰し、新tokenによる同じメールの再確認は別の所有確認記録として単回消費する。本人/メールの照合はverified_atありの記録を用い、必要時は最新の確認日時を返す。メール変更は新たな確認依頼とし、既存依頼のメールを差し替えない。Event PublicContactへ設定できるのは設定本人のverified_atありの登録だけ。配送はBEの秘密配送経路で行い、token生値をOutboxへ保存しない。
+
+期限切れ/失効した未確認メールはtokenと専用表を同一Txで削除する。確認済みメールは個人情報として精算済み退会30日後の削除対象に含め、金銭履歴7年保持とは分離する。所有確認はメール到達を伴うhandler試験が必要であり、DB制約合格だけで配送や本人認証を証明しない。
+
+チャージ訂正はCreateChargeCorrection.cash_return_required=trueならPENDING_RETURN、falseならNOT_REQUIREDを明示して保存する。現金払戻しの誤PAID訂正は内部kind=CASH_REFUND_CORRECTION、公開kind=REVERSE_UNDELIVERED_CASH_REFUND、返却状態NOT_REQUIRED。返却済み/返却不要は終端で、必要な返却を後から不要へ変更しない。INVESTIGATINGからRETURNEDへ進む時は同じ訂正のRESOLVED/COMMITTEDかつRETURNEDまたはNOT_RETURNEDの案件を参照する。NOT_RETURNEDの場合の明示返却事実はhandlerが監査する。訂正取引の残高効果を再実行しない。
+
 ## 永続化と排他
 
 金銭/在庫は[台帳の共通順](ledger.md)でロックし、現在認可・MFA・停止・期間を再検証。条件版/所属FK、自然一意、冪等キー、台帳を同じCOMMITへ含める。現金物理授受はDB非原子的なので、事実/案件/後続commandを分ける。調査resolveだけで残高や交付を変えない。
 
 DBのCHECK/FK/triggerは不正な保存の防壁であり、本人承認や実物の再販売可能性を証明しない。成功応答には取引/台帳/残高/業務行/監査/OutboxのCOMMITが必要。handler、worker、現在権限の照合は未実装。
+
+Orderの店舗/本人は元PaymentRequestに一致する複合FKを持つ。遅延検査でITEMS/SUCCEEDED要求だけから注文を成立させ、元要求額/取引額/全明細合計の一致を確認する。本人関連付け・要求成功・注文挿入の順序は同一Tx内で完結でき、別店舗/別支払者の注文はCOMMITできない。在庫の目標値訂正は現在値と同じ場合もCORRECTION/delta=0として理由・キー・監査・在庫版を保存し、APIのquantity=0と現在Stockを返す。ADD/WASTE/RETURN_TO_STOCKの0数量は許可しない。
 
 ## CSV・snapshot
 

@@ -20,6 +20,7 @@
   "dispute_preservations",
   "idempotency_keys",
   "tokens",
+  "contact_email_verifications",
   "products",
   "inventory",
   "carts",

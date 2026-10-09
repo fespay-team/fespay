@@ -1,6 +1,6 @@
 # DB物理モデルER図
 
-状態：レビュー案。根拠は[設計方針](design.md)、全列/制約は[物理スキーマ](physical-schema.md)。領域ごとに54表を掲載し、SQLのFKから親子関係を抽出した。関連する領域外の親も図に表示する。線は親子参照を示し、必須/任意・1対1・同時件数は列のNULLと一意制約を参照する。
+状態：レビュー案。根拠は[設計方針](design.md)、全列/制約は[物理スキーマ](physical-schema.md)。領域ごとに55表を掲載し、SQLのFKから親子関係を抽出した。関連する領域外の親も図に表示する。線は親子参照を示し、必須/任意・1対1・同時件数は列のNULLと一意制約を参照する。
 
 ## 認証・イベント・管理
 
@@ -9,6 +9,7 @@ erDiagram
   accounts
   account_profiles
   auth_contexts
+  contact_email_verifications
   service_control
   publication_gates
   events
@@ -19,6 +20,8 @@ erDiagram
   suspensions
   accounts ||--o{ account_profiles : references
   accounts ||--o{ auth_contexts : references
+  accounts ||--o{ contact_email_verifications : references
+  tokens ||--o{ contact_email_verifications : references
   accounts ||--o{ event_policies : references
   accounts ||--o{ events : references
   accounts ||--o{ memberships : references
@@ -131,6 +134,7 @@ erDiagram
   orders ||--o{ receipt_verifications : references
   orders ||--o{ refunds : references
   payment_requests ||--o{ carts : references
+  payment_requests ||--o{ orders : references
   payment_requests ||--o{ stock_reservations : references
   products ||--o{ cart_lines : references
   products ||--o{ inventory : references

@@ -11,6 +11,9 @@
 - OrderLineのrefunded/restored_quantityは成立返金明細/在庫移動から導出する。PurchaseRefundのcredited_toはSUCCEEDEDだけ公開する。
 - APIのresource versionは各所有行のversion、checked_atは読取確認時刻。Transactionは不変なので行の更新版を持たない。
 - 商品display_order/inventory_managed、店舗visible/features、レジname/activeは明示列。EventGuideの公開連絡先/主催名/会場等はevents.guide、EventSettingsはevent_settings.settingsと条件版JSON。BEで該当API schemaを検証する。
+- Correctionのcash_return_statusは同じ4状態を明示保存。CHARGE_REVERSALの返却要否は初期状態へ変換し、内部CASH_REFUND_CORRECTIONは公開REVERSE_UNDELIVERED_CASH_REFUND/NOT_REQUIREDへ変換する。
+- CONTACT_EMAILはtokensとcontact_email_verificationsの本人/指定メール/binding/確認日時で照合。tokenだけの確認から専用表のメールを返し、同tokenの再確認では元のverified_atを返す。ログインidentityは変更しない。
+- 注文は元PaymentRequestの店舗/支払者と複合FKで一致し、ITEMS/SUCCEEDED要求のみ。CORRECTIONの目標在庫が現在値と同じ場合はdelta=0/quantity=0の履歴と現在Stockを返す。
 
 ## 全operation対応
 
@@ -127,7 +130,7 @@
 | `cancelUnreceivedCharge` | `POST /v1/events/{event_id}/charges/{charge_id}/cancel` | cash_operations, cash_cases, cash_corrections, transactions | 1準備1付与。現金受領/未成立返却を別事実として保存 |
 | `getCashOperation` | `GET /v1/events/{event_id}/cash-operations/{cash_operation_id}` | cash_operations, cash_corrections, cash_cases, cash_movements, cash_reconciliations, report_snapshots | 実査/訂正/現金処理の型別FK。resolve単独は価値移動なし |
 | `correctCharge` | `POST /v1/events/{event_id}/charges/{charge_id}/corrections` | cash_operations, cash_cases, cash_corrections, transactions | 1準備1付与。現金受領/未成立返却を別事実として保存 |
-| `correctUndeliveredCashRefund` | `POST /v1/events/{event_id}/transactions/{transaction_id}/corrections` | transactions, ledger_entries, idempotency_keys | 現在scopeで正本/元効果を照会。GLOBAL/EVENT分離 |
+| `correctUndeliveredCashRefund` | `POST /v1/events/{event_id}/transactions/{transaction_id}/corrections` | cash_operations, cash_cases, cash_corrections, transactions, ledger_entries, idempotency_keys | 元PAID/同じ解決案件・全額1回の訂正。内部kindはCASH_REFUND_CORRECTION、現金返却はNOT_REQUIRED |
 | `getCashCorrection` | `GET /v1/events/{event_id}/corrections/{correction_id}` | cash_operations, cash_corrections, cash_cases, cash_movements, cash_reconciliations, report_snapshots | 実査/訂正/現金処理の型別FK。resolve単独は価値移動なし |
 | `recordCorrectionCashReturn` | `POST /v1/events/{event_id}/corrections/{correction_id}/cash-return` | cash_operations, cash_corrections, cash_cases, cash_movements, cash_reconciliations, report_snapshots | 実査/訂正/現金処理の型別FK。resolve単独は価値移動なし |
 | `createCashCase` | `POST /v1/events/{event_id}/cash-cases` | cash_operations, cash_corrections, cash_cases, cash_movements, cash_reconciliations, report_snapshots | 実査/訂正/現金処理の型別FK。resolve単独は価値移動なし |
@@ -181,10 +184,10 @@
 | `listExpirationRuns` | `GET /v1/events/{event_id}/expiration-runs` | events, event_settings, event_policies, memberships, wallets, shops, registers, suspensions, expiration_runs, expiration_items | 現在制御/条件版を金銭確定と直列化。退出/完了は全未精算を再判定 |
 | `getExpirationRun` | `GET /v1/events/{event_id}/expiration-runs/{expiration_run_id}` | events, event_settings, event_policies, memberships, wallets, shops, registers, suspensions, expiration_runs, expiration_items | 現在制御/条件版を金銭確定と直列化。退出/完了は全未精算を再判定 |
 | `recordUnpostedChargeReturn` | `POST /v1/events/{event_id}/charges/{charge_id}/cash-return` | cash_operations, cash_cases, cash_corrections, transactions | 1準備1付与。現金受領/未成立返却を別事実として保存 |
-| `requestContactEmailVerification` | `POST /v1/accounts/me/contact-email-verification-requests` | events, event_settings, event_policies, memberships, wallets, shops, registers, suspensions, expiration_runs, expiration_items | 現在制御/条件版を金銭確定と直列化。退出/完了は全未精算を再判定 |
-| `confirmContactEmail` | `POST /v1/accounts/me/contact-email-confirmations` | events, event_settings, event_policies, memberships, wallets, shops, registers, suspensions, expiration_runs, expiration_items | 現在制御/条件版を金銭確定と直列化。退出/完了は全未精算を再判定 |
+| `requestContactEmailVerification` | `POST /v1/accounts/me/contact-email-verification-requests` | accounts, tokens, contact_email_verifications, outbox | 公開連絡先をログインidentityと分離。指定メール/本人/CONTACT_EMAIL bindingを同一Txで保存し配送 |
+| `confirmContactEmail` | `POST /v1/accounts/me/contact-email-confirmations` | accounts, tokens, contact_email_verifications | 本人/用途/binding/期限をロック後照合。単回消費とverified_atを同一Tx、同tokenの再確認は同じ確認記録へ復帰 |
 | `getMyGlobalOperationResult` | `GET /v1/operation-results` | transactions, ledger_entries, idempotency_keys | 現在scopeで正本/元効果を照会。GLOBAL/EVENT分離 |
-| `getClientPolicy` | `GET /v1/client-policy` | outbox, event_stream_positions, sse_replay_entries | 現在認可・保持position、欠落時resync。client-policyは配信設定 |
+| `getClientPolicy` | `GET /v1/client-policy` | 配信設定（DB保存不要） | READ/RECOVERY/CURRENTの互換性と更新条件。SSEの保存モデルとは別 |
 | `listExportParts` | `GET /v1/exports/{export_id}/parts` | report_snapshots, report_snapshot_rows, exports, export_parts, export_slots, audit | 固定物化時点/全part/本人2slot/完成後24h、creator AND現在scopeで配信 |
 | `getSalesBreakdown` | `GET /v1/events/{event_id}/reports/sales/breakdown` | report_snapshots, report_snapshot_rows, exports, export_parts, export_slots, audit | 固定物化時点/全part/本人2slot/完成後24h、creator AND現在scopeで配信 |
 

@@ -315,6 +315,19 @@ CREATE TABLE tokens (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Pending address and verified ownership are separate from login identities.
+CREATE TABLE contact_email_verifications (
+  id uuid PRIMARY KEY,
+  account_id uuid NOT NULL,
+  token_id uuid NOT NULL UNIQUE,
+  email citext NOT NULL CHECK(char_length(email) BETWEEN 1 AND 254),
+  verified_at timestamptz,
+  version positive_version NOT NULL DEFAULT 1,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX contact_email_verified_owner ON contact_email_verifications (account_id,email,verified_at DESC) WHERE verified_at IS NOT NULL;
 CREATE TABLE products (
   id uuid PRIMARY KEY,
   event_id uuid NOT NULL,
@@ -613,7 +626,7 @@ CREATE TABLE stock_moves (
   kind text NOT NULL CHECK(kind IN ('ADD','WASTE','CORRECTION','RETURN_TO_STOCK')),
   refund_line_id uuid,
   idempotency_id uuid NOT NULL,
-  delta bigint NOT NULL CHECK(delta BETWEEN -2147483647 AND 2147483647 AND delta<>0),
+  delta bigint NOT NULL CHECK(delta BETWEEN -2147483647 AND 2147483647 AND (delta<>0 OR kind='CORRECTION')),
   reason text NOT NULL,
   actor_account_id uuid NOT NULL,
   CHECK((kind='RETURN_TO_STOCK' AND refund_line_id IS NOT NULL AND delta>0) OR (kind<>'RETURN_TO_STOCK' AND refund_line_id IS NULL)),
@@ -662,9 +675,10 @@ CREATE TABLE cash_corrections (
   amount positive_yen NOT NULL,
   balance_source text NOT NULL CHECK(balance_source IN ('AVAILABLE','REFUND_ONLY')),
   transaction_id uuid NOT NULL UNIQUE,
-  cash_returned_confirmed boolean NOT NULL DEFAULT false,
+  cash_return_status text NOT NULL CHECK(cash_return_status IN ('PENDING_RETURN','RETURNED','NOT_REQUIRED','INVESTIGATING')),
   reason text NOT NULL,
   resolution_case_id uuid,
+  CHECK(kind='CHARGE_REVERSAL' OR cash_return_status='NOT_REQUIRED'),
   UNIQUE(event_id, id),
   version positive_version NOT NULL DEFAULT 1,
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -925,6 +939,9 @@ ALTER TABLE idempotency_keys ADD CONSTRAINT idempotency_keys_32_fk FOREIGN KEY (
 ALTER TABLE idempotency_keys ADD CONSTRAINT idempotency_keys_33_fk FOREIGN KEY (actor_account_id) REFERENCES accounts (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE tokens ADD CONSTRAINT tokens_34_fk FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE tokens ADD CONSTRAINT tokens_35_fk FOREIGN KEY (subject_account_id) REFERENCES accounts (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE tokens ADD UNIQUE(id,subject_account_id);
+ALTER TABLE contact_email_verifications ADD FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE contact_email_verifications ADD FOREIGN KEY(token_id,account_id) REFERENCES tokens(id,subject_account_id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE products ADD CONSTRAINT products_36_fk FOREIGN KEY (event_id,shop_id) REFERENCES shops (event_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE inventory ADD CONSTRAINT inventory_37_fk FOREIGN KEY (event_id,shop_id,product_id) REFERENCES products (event_id,shop_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE carts ADD CONSTRAINT carts_38_fk FOREIGN KEY (event_id,shop_id) REFERENCES shops (event_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -959,6 +976,8 @@ ALTER TABLE transfer_requests ADD CONSTRAINT transfer_requests_66_fk FOREIGN KEY
 ALTER TABLE orders ADD CONSTRAINT orders_67_fk FOREIGN KEY (event_id,shop_id) REFERENCES shops (event_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE orders ADD CONSTRAINT orders_68_fk FOREIGN KEY (event_id,account_id) REFERENCES memberships (event_id,account_id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE orders ADD CONSTRAINT orders_69_fk FOREIGN KEY (event_id,transaction_id,payment_request_id) REFERENCES transactions (event_id,id,payment_request_id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE payment_requests ADD UNIQUE(event_id,id,shop_id,payer_account_id);
+ALTER TABLE orders ADD CONSTRAINT orders_payment_scope_fk FOREIGN KEY(event_id,payment_request_id,shop_id,account_id) REFERENCES payment_requests(event_id,id,shop_id,payer_account_id) ON DELETE RESTRICT ON UPDATE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE order_lines ADD CONSTRAINT order_lines_70_fk FOREIGN KEY (event_id,shop_id,order_id) REFERENCES orders (event_id,shop_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE order_lines ADD CONSTRAINT order_lines_71_fk FOREIGN KEY (event_id,shop_id,product_id) REFERENCES products (event_id,shop_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE stock_reservations ADD CONSTRAINT stock_reservations_72_fk FOREIGN KEY (event_id,shop_id,product_id) REFERENCES products (event_id,shop_id,id) ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -1203,13 +1222,15 @@ END $$;
 CREATE CONSTRAINT TRIGGER wallet_projection AFTER INSERT OR UPDATE ON wallets DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_wallet_projection();
 CREATE CONSTRAINT TRIGGER ledger_wallet_projection AFTER INSERT ON ledger_entries DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_wallet_projection();
 CREATE FUNCTION check_order_total() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE oid uuid; o orders; n bigint; total numeric; paid numeric;
+DECLARE oid uuid; o orders; request payment_requests; n bigint; total numeric; paid numeric;
 BEGIN
  IF TG_TABLE_NAME='orders' THEN oid:=NEW.id; ELSE oid:=NEW.order_id; END IF;
  SELECT * INTO STRICT o FROM orders WHERE id=oid;
  SELECT count(*),coalesce(sum(line_total),0) INTO n,total FROM order_lines WHERE order_id=oid;
  SELECT amount INTO paid FROM transactions WHERE id=o.transaction_id;
- IF n NOT BETWEEN 1 AND 50 OR total<>o.total_amount OR paid<>o.total_amount THEN
+ SELECT * INTO STRICT request FROM payment_requests WHERE id=o.payment_request_id;
+ IF request.basis<>'ITEMS' OR request.status<>'SUCCEEDED' OR request.amount<>o.total_amount
+ OR n NOT BETWEEN 1 AND 50 OR total<>o.total_amount OR paid<>o.total_amount THEN
   RAISE EXCEPTION 'order line count/total/payment mismatch' USING ERRCODE='23514'; END IF;
  RETURN NULL;
 END $$;
@@ -1265,5 +1286,65 @@ BEGIN
 END $$;
 CREATE CONSTRAINT TRIGGER refund_total AFTER INSERT OR UPDATE ON refunds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_refund_total();
 CREATE CONSTRAINT TRIGGER refund_line_total AFTER INSERT ON refund_lines DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_refund_total();
+
+CREATE FUNCTION guard_correction_facts() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF (OLD.event_id,OLD.cash_operation_id,OLD.original_transaction_id,OLD.kind,OLD.amount,OLD.balance_source,OLD.transaction_id)
+ IS DISTINCT FROM (NEW.event_id,NEW.cash_operation_id,NEW.original_transaction_id,NEW.kind,NEW.amount,NEW.balance_source,NEW.transaction_id)
+ OR (OLD.cash_return_status IN ('RETURNED','NOT_REQUIRED') AND OLD.cash_return_status<>NEW.cash_return_status)
+ OR (OLD.cash_return_status<>'NOT_REQUIRED' AND NEW.cash_return_status='NOT_REQUIRED')
+ OR (OLD.cash_return_status='INVESTIGATING' AND NEW.cash_return_status='PENDING_RETURN')
+ THEN RAISE EXCEPTION 'correction origin/terminal return state is immutable' USING ERRCODE='23514'; END IF;
+ IF OLD.cash_return_status='INVESTIGATING' AND NEW.cash_return_status='RETURNED'
+ AND NOT EXISTS(SELECT 1 FROM cash_cases WHERE id=NEW.resolution_case_id AND event_id=NEW.event_id
+   AND source_type='CORRECTION' AND correction_id=NEW.id AND status='RESOLVED'
+   AND db_outcome='COMMITTED' AND cash_fact IN ('NOT_RETURNED','RETURNED'))
+ THEN RAISE EXCEPTION 'correction return needs same-source resolved evidence' USING ERRCODE='23514'; END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER correction_facts_fixed BEFORE UPDATE ON cash_corrections FOR EACH ROW EXECUTE FUNCTION guard_correction_facts();
+
+CREATE FUNCTION guard_contact_email_facts() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_TABLE_NAME='contact_email_verifications' THEN
+  IF (OLD.account_id,OLD.token_id,OLD.email) IS DISTINCT FROM (NEW.account_id,NEW.token_id,NEW.email)
+  OR (OLD.verified_at IS NOT NULL AND OLD.verified_at IS DISTINCT FROM NEW.verified_at)
+  THEN RAISE EXCEPTION 'contact email ownership facts are immutable' USING ERRCODE='23514'; END IF;
+ ELSE
+  IF (OLD.purpose='CONTACT_EMAIL' OR NEW.purpose='CONTACT_EMAIL') AND
+   ((OLD.purpose,OLD.subject_account_id,OLD.binding_hash,OLD.expires_at)
+     IS DISTINCT FROM (NEW.purpose,NEW.subject_account_id,NEW.binding_hash,NEW.expires_at)
+    OR (OLD.consumed_at IS NOT NULL AND OLD.consumed_at IS DISTINCT FROM NEW.consumed_at))
+  THEN RAISE EXCEPTION 'contact token binding/consumption is immutable' USING ERRCODE='23514'; END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER contact_email_facts_fixed BEFORE UPDATE ON contact_email_verifications FOR EACH ROW EXECUTE FUNCTION guard_contact_email_facts();
+CREATE TRIGGER contact_token_facts_fixed BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE FUNCTION guard_contact_email_facts();
+
+CREATE FUNCTION contact_email_binding(account_id uuid, address text) RETURNS bytea LANGUAGE sql IMMUTABLE STRICT AS $$
+ SELECT sha256(convert_to('FESPAY_CONTACT_EMAIL_V1'||E'\n'||account_id::text||E'\n'||address,'UTF8'));
+$$;
+CREATE FUNCTION check_contact_email_verification() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE tid uuid; t tokens; c contact_email_verifications;
+BEGIN
+ IF TG_TABLE_NAME='tokens' THEN tid:=NEW.id;
+ ELSIF TG_OP='DELETE' THEN tid:=OLD.token_id;
+ ELSE tid:=NEW.token_id; END IF;
+ SELECT * INTO t FROM tokens WHERE id=tid;
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ SELECT * INTO c FROM contact_email_verifications WHERE token_id=tid;
+ IF NOT FOUND THEN
+  IF t.purpose='CONTACT_EMAIL' THEN RAISE EXCEPTION 'contact token needs address record' USING ERRCODE='23514'; END IF;
+  RETURN NULL;
+ END IF;
+ IF t.purpose<>'CONTACT_EMAIL' OR t.binding_hash IS DISTINCT FROM contact_email_binding(c.account_id,c.email::text)
+ OR c.verified_at IS DISTINCT FROM t.consumed_at
+ OR (c.verified_at IS NOT NULL AND (t.revoked_at IS NOT NULL OR c.verified_at>=t.expires_at))
+ THEN RAISE EXCEPTION 'contact email purpose/binding/verification mismatch' USING ERRCODE='23514'; END IF;
+ RETURN NULL;
+END $$;
+CREATE CONSTRAINT TRIGGER contact_email_verified AFTER INSERT OR UPDATE OR DELETE ON contact_email_verifications DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_contact_email_verification();
+CREATE CONSTRAINT TRIGGER contact_token_verified AFTER INSERT OR UPDATE ON tokens DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_contact_email_verification();
 
 COMMIT;

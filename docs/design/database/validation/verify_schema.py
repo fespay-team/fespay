@@ -71,10 +71,14 @@ def main():
         subprocess.run(['docker','run','--rm','--detach','--pull','never','--name',name,'--network','none',
                         '--tmpfs','/var/lib/postgresql/data','-e','POSTGRES_HOST_AUTH_METHOD=trust',args.image],
                        check=True, capture_output=True, text=True)
-        for _ in range(80):
-            if subprocess.run(['docker','exec',name,'pg_isready','-U','postgres'],capture_output=True).returncode==0: break
+        # Initialization uses a socket-only temporary server, then stops it.
+        # Only the final server listens on loopback TCP, even with network none.
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline:
+            if subprocess.run(['docker','exec',name,'pg_isready','-h','127.0.0.1','-U','postgres'],capture_output=True).returncode==0: break
             time.sleep(.1)
         else: raise RuntimeError('isolated PostgreSQL not ready')
+        server_version=psql('SHOW server_version;',False).stdout.strip()
         r = psql((ROOT/'sql/initial-schema-draft.sql').read_text(),False)
         if r.returncode: raise AssertionError('schema apply\n'+r.stderr)
         role = psql('CREATE ROLE fespay_app NOLOGIN; GRANT USAGE ON SCHEMA public TO fespay_app; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO fespay_app;',False)
@@ -191,6 +195,85 @@ COMMIT;"""
         check('QUEUED no completion deadline',export)
         check('READY needs completion plus 24h',export+f"UPDATE exports SET status='READY',snapshot_at=now(),generated_at=now(),row_count=0 WHERE id='{exp}';",'23514')
         snap2=uid();exp2=uid();check('slot 1 and 2 only',export+f"INSERT INTO export_slots(id,account_id,slot,export_id) VALUES('{uid()}','{A}',3,'{exp}');",'23514')
+
+        def paid_order(shop=SHOP, payer=A, basis='ITEMS', succeeded=True, associate_last=False):
+            pid,b=request()
+            if basis!='ITEMS':b=b.replace("'ITEMS'", "'"+basis+"'")
+            paid,extra=tx('PAYMENT',100,[('WALLET_AVAILABLE',W,None,-100),('SHOP_SALES',None,SHOP,100)],payment=pid)
+            b+=extra
+            association=f"UPDATE payment_requests SET status='SUCCEEDED',payer_account_id='{A}',transaction_id='{paid}' WHERE id='{pid}';\n" if succeeded else ''
+            if not succeeded:b+=f"UPDATE payment_requests SET payer_account_id='{A}' WHERE id='{pid}';\n"
+            if not associate_last:b+=association
+            if payer==B:b+=f"INSERT INTO memberships(id,event_id,account_id,accepted_policy_version,joined_at) VALUES('{uid()}','{E}','{B}',1,now());\n"
+            product=PROD
+            if shop!=SHOP:
+                product=uid();b+=f"INSERT INTO products(id,event_id,shop_id,name,price,status) VALUES('{product}','{E}','{shop}','other',50,'ON_SALE');\n"
+            oid=uid()
+            b+=f"INSERT INTO orders(id,event_id,shop_id,account_id,payment_request_id,transaction_id,display_number,route,fulfillment_status,total_amount) VALUES('{oid}','{E}','{shop}','{payer}','{pid}','{paid}','review','REGISTER_A','ACCEPTED',100);\n"
+            b+=f"INSERT INTO order_lines(id,event_id,shop_id,order_id,product_id,product_name_snapshot,unit_price,quantity,line_total,product_version) VALUES('{uid()}','{E}','{shop}','{oid}','{product}','food',50,2,100,1);\n"
+            if associate_last:b+=association
+            return b
+        check('order matches payment shop and payer',paid_order())
+        check('order association can complete within same commit',paid_order(associate_last=True))
+        check('order cannot reference different payment shop',paid_order(shop=SHOP2),'23503')
+        check('order cannot reference different payment payer',paid_order(payer=B),'23503')
+        check('AMOUNT payment cannot create item order',paid_order(basis='AMOUNT'),'23514')
+        check('order cannot exist before successful payment',paid_order(succeeded=False),'23514')
+
+        def correction(state='PENDING_RETURN'):
+            cid,op=uid(),uid()
+            effect,b=tx('CHARGE_REVERSAL',50,[('WALLET_AVAILABLE',W,None,-50),('EVENT_CASH',None,None,50)],source=charge,origin=cid)
+            b+=f"INSERT INTO cash_operations(id,event_id,account_id,operator_account_id,type,status,amount,transaction_id,cash_received_confirmed) VALUES('{op}','{E}','{A}','{A}','CHARGE','SUCCEEDED',500,'{charge}',true);\n"
+            b+=f"INSERT INTO cash_corrections(id,event_id,cash_operation_id,original_transaction_id,kind,amount,balance_source,transaction_id,cash_return_status,reason) VALUES('{cid}','{E}','{op}','{charge}','CHARGE_REVERSAL',50,'AVAILABLE','{effect}','{state}','review');\n"
+            return cid,b
+        for state in ('PENDING_RETURN','RETURNED','NOT_REQUIRED','INVESTIGATING'):
+            _,b=correction(state);check('correction stores '+state,b)
+        _,b=correction('UNKNOWN');check('correction rejects unknown return state',b,'23514')
+        cid,b=correction('NOT_REQUIRED');check('no-return correction cannot become pending',b+f"UPDATE cash_corrections SET cash_return_status='PENDING_RETURN' WHERE id='{cid}';",'23514')
+        cid,b=correction('RETURNED');check('returned correction cannot reopen',b+f"UPDATE cash_corrections SET cash_return_status='PENDING_RETURN' WHERE id='{cid}';",'23514')
+        cid,b=correction();check('required cash return cannot be waived later',b+f"UPDATE cash_corrections SET cash_return_status='NOT_REQUIRED' WHERE id='{cid}';",'23514')
+        check('correction amount is immutable',b+f"UPDATE cash_corrections SET amount=49 WHERE id='{cid}';",'23514')
+        cid,b=correction('INVESTIGATING');check('investigating correction needs evidence',b+f"UPDATE cash_corrections SET cash_return_status='RETURNED' WHERE id='{cid}';",'23514')
+        case=uid()
+        resolved=f"INSERT INTO cash_cases(id,event_id,source_type,correction_id,status,cash_fact,db_outcome,reason,resolution_reason,evidence_references,resolved_at) VALUES('{case}','{E}','CORRECTION','{cid}','RESOLVED','RETURNED','COMMITTED','review','verified','[\"evidence\"]',now());\n"
+        check('same-source resolved correction can record returned fact',b+resolved+f"UPDATE cash_corrections SET cash_return_status='RETURNED',resolution_case_id='{case}' WHERE id='{cid}';")
+        check('unknown DB outcome cannot resolve return',b+resolved.replace("'COMMITTED'","'UNKNOWN'")+f"UPDATE cash_corrections SET cash_return_status='RETURNED',resolution_case_id='{case}' WHERE id='{cid}';",'23514')
+        other_cid,other=correction()
+        check('other-source resolved case cannot resolve return',b+other+resolved.replace(f"'{cid}','RESOLVED'",f"'{other_cid}','RESOLVED'")+f"UPDATE cash_corrections SET cash_return_status='RETURNED',resolution_case_id='{case}' WHERE id='{cid}';",'23514')
+
+        def contact(email='public@example.test', token_owner=A, record_owner=A, purpose='CONTACT_EMAIL'):
+            tid,cid=uid(),uid()
+            event='NULL' if purpose=='CONTACT_EMAIL' else "'"+E+"'"
+            b=f"INSERT INTO tokens(id,event_id,purpose,subject_account_id,token_hash,binding_hash,expires_at) VALUES('{tid}',{event},'{purpose}','{token_owner}',sha256(convert_to('{tid}','UTF8')),contact_email_binding('{token_owner}','{email}'),now()+interval '24 hours');\n"
+            b+=f"INSERT INTO contact_email_verifications(id,account_id,token_id,email) VALUES('{cid}','{record_owner}','{tid}','{email}');\n"
+            return tid,cid,b
+        def confirm(tid,cid):
+            return f"UPDATE tokens SET consumed_at=now() WHERE id='{tid}'; UPDATE contact_email_verifications SET verified_at=now() WHERE id='{cid}';\n"
+        tid,cid,b=contact();check('pending public email persists independently of login email',b)
+        check('contact token needs dedicated address record',b.split('INSERT INTO contact_email_verifications')[0],'23514')
+        check('public email verification and consumption commit together',b+confirm(tid,cid))
+        check('contact cannot verify before token consumption',b+f"UPDATE contact_email_verifications SET verified_at=now() WHERE id='{cid}';",'23514')
+        check('contact consumption requires ownership record update',b+f"UPDATE tokens SET consumed_at=now() WHERE id='{tid}';",'23514')
+        check('pending contact email cannot be swapped',b+f"UPDATE contact_email_verifications SET email='other@example.test' WHERE id='{cid}';",'23514')
+        check('contact binding cannot change',b+f"UPDATE tokens SET binding_hash=decode(repeat('02',32),'hex') WHERE id='{tid}';",'23514')
+        check('contact replay cannot change consumed timestamp',b+confirm(tid,cid)+f"UPDATE tokens SET consumed_at=now()+interval '1 second' WHERE id='{tid}';",'23514')
+        check('verified contact timestamp cannot change',b+confirm(tid,cid)+f"UPDATE contact_email_verifications SET verified_at=now()+interval '1 second' WHERE id='{cid}';",'23514')
+        check('expired contact cannot verify',b.replace("now()+interval '24 hours'","now()-interval '1 second'")+confirm(tid,cid),'23514')
+        check('revoked contact cannot verify',b+f"UPDATE tokens SET revoked_at=now() WHERE id='{tid}';"+confirm(tid,cid),'23514')
+        check('wrong email binding cannot persist',b.replace(f"contact_email_binding('{A}','public@example.test')","decode(repeat('02',32),'hex')"),'23514')
+        _,_,other=contact(record_owner=B);check('contact token and record owner must match',other,'23503')
+        _,_,other=contact(purpose='RECIPIENT');check('other-purpose token cannot verify email',other,'23514')
+        tid2,cid2,other=contact();check('same-owner address can be confirmed with a new token',b+confirm(tid,cid)+other+confirm(tid2,cid2))
+        check('one contact record per token',b+f"INSERT INTO contact_email_verifications(id,account_id,token_id,email) VALUES('{uid()}','{A}','{tid}','public@example.test');",'23505')
+        tid2,cid2,other=contact(token_owner=B,record_owner=B);check('public contact address can be verified by another owner',b+confirm(tid,cid)+other+confirm(tid2,cid2))
+        check('pending contact cleanup removes address and token together',b+f"DELETE FROM contact_email_verifications WHERE id='{cid}'; DELETE FROM tokens WHERE id='{tid}';")
+
+        for kind,delta,code in [('CORRECTION',0,None),('ADD',0,'23514'),('WASTE',0,'23514')]:
+            kid,b=key(operation='createInventoryMove')
+            b+=f"INSERT INTO stock_moves(id,event_id,shop_id,product_id,kind,idempotency_id,delta,reason,actor_account_id) VALUES('{uid()}','{E}','{SHOP}','{PROD}','{kind}','{kid}',{delta},'same physical count','{A}');\n"
+            b+=f"UPDATE inventory SET version=version+1 WHERE id='{INV}';\n"
+            check('inventory '+kind+' zero delta',b,code)
+
         # Both requests use distinct keys; the first owns the refund_line lock.
         first="SET application_name='fespay-restore-first'; BEGIN;\n"+restore()+"SELECT pg_sleep(0.8); COMMIT;"
         second='BEGIN;\n'+restore()+'COMMIT;'
@@ -210,7 +293,7 @@ COMMIT;"""
         restored=psql(f"SELECT restored_quantity FROM refund_lines WHERE id='{refund_line}'; SELECT sum(delta) FROM stock_moves WHERE refund_line_id='{refund_line}';")
         if [v for v in restored.stdout.splitlines() if v not in ('SET','')]!=['1','1']:raise AssertionError(restored.stdout)
         if args.output:args.output.write_text(json.dumps(checks,ensure_ascii=False,indent=2)+'\n')
-        print(f'PostgreSQL constraints: {len(checks)} cases passed; separate application role; two-connection race passed.')
+        print(f'PostgreSQL {server_version} constraints: {len(checks)} cases passed; separate application role; two-connection race passed.')
     finally:
         subprocess.run(['docker','stop',name],capture_output=True,timeout=15)
 

@@ -39,6 +39,8 @@ EVENTはactor/event/operation/key、GLOBALはactor/operation/keyの別部分一�
 
 transactions.origin_kind/origin_idは成立の自然由来で、event/由来にUNIQUEを持つ。PAYMENTはpayment_request_idでも一意。origin_kindはCHARGE、PAYMENT、TRANSFER、HOLD、HOLD_RELEASE、REFUND、CORRECTION、EXPIRATION_ITEMの固定対応をSQLのCHECKとhandlerで検査する。Q02/O01は同じrequestの共通finalizePaymentを呼び、別キーで一意衝突した場合も認可後に既成立取引/注文を返す。全runのキーで複数wallet取引を作れるため、transactions.idempotency_idを一律UNIQUEにはしない。
 
+注文は同じ支払要求の店舗/支払者へ複合FKで結合する。ITEMS/SUCCEEDED・要求額/決済額/明細合計は遅延triggerで確認し、同額の別店舗/別本人の要求を流用しない。CORRECTIONの在庫目標値が現在値と同じ場合はdelta=0の移動・理由・キー・監査・版更新を同じTxで残す。その他の在庫移動は非ゼロ数量が必要。
+
 ## 共通ロック順と競合
 
 1. actor・session/MFA確認後、対象のサービス/イベント/店舗制御、grant/条件版、冪等キーを同じ順で取得する。grant解除/停止側も同じ制御行をロックする。
@@ -56,3 +58,5 @@ RETURN_TO_STOCKは元refund_lineをロックし、成立数量−既StockMove合
 Transaction・台帳・条件版・在庫移動・注文明細・重要監査は更新/削除triggerで拒否する。refund_lineの原数量/金額は不変、復元射影だけ更新する。個人情報は別表に分離し、金銭FKのRESTRICTを外さない。通常appロールはschema/trigger変更権限を持たず、保持期間後の削除は別の承認済み保管/移行手順で行う。
 
 復旧時は全台帳合計0、wallet3区分、店舗純売上、現金記録と未解決案件を同一snapshotで照合する。差異がある状態で営業再開しない。バックアップ復元後に退会/失効を再適用する。実際の運用復旧・性能・認可のATは未実施。
+
+チャージ訂正の金銭取引と現金返却は別の成立事実。cash_return_statusを4状態で保存し、返却確認は既存の訂正取引を再記帳しない。RETURNED/NOT_REQUIREDを巻き戻さず、INVESTIGATING→RETURNEDは同一訂正の解決済み現金案件に結合する。公開連絡先の所有確認もtoken消費と確認日時を同一Txで記録するが、金銭7年履歴へメール本文を混在させない。
