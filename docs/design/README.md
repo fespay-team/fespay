@@ -5,6 +5,7 @@
 | 領域 | 入口 | 主担当の目安 |
 | --- | --- | --- |
 | 基本設計全体 | [basic-design.md](basic-design.md) | 総合 |
+| 詳細設計全体（再レビュー待ち） | [detailed-design.md](detailed-design.md) | 総合＋BE＋FE |
 | 全体構成・境界 | [architecture](architecture/README.md) | 総合＋BE |
 | DB・台帳 | [database](database/README.md) | BE-1＋BE-2 |
 | API契約 | [api](api/README.md) | BE＋利用するFE |
