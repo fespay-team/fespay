@@ -15,7 +15,7 @@
 
 在庫はon_hand/reserved/availableを非負32bit整数とし、reserved<=on_handを守る。入荷/廃棄/目標値訂正は理由付きの移動記録。手動減算は予約数を下回らせない。返金商品の再販戻しはRETURN_TO_STOCK、元refund_line_id、数量、resalable_confirmed=true、理由、版、キー必須。元商品/成立返金数量−復元済数量を排他再計算し、在庫・復元累計・移動を同一Txで確定する。
 
-画像はmultipartでJPEG/PNG/WebPの実内容を検証。5MB超413、偽MIME/SVG/HTML等415または422。デコード時の寸法/画素資源保護、長辺2048px以下への再エンコード・EXIF除去を適用する。外部URLを取得しない。DBに参照されなかったアップロードは回収し、画像キーを他店へ関連付けない。具体的なデコード資源上限とobject storageはBE/環境レビュー対象。
+画像はmultipartでJPEG/PNG/WebPの実内容を検証。5MB超413、偽MIME/SVG/HTML等415または422。デコード時の寸法/画素資源保護、長辺2048px以下への再エンコード・EXIF除去を適用する。外部URLを取得しない。DBに参照されなかったアップロードは回収し、画像キーを他店へ関連付けない。辺8,192px・総33,554,432画素・1フレームのAPI資源保護案は[HTTP契約](http-contract.md)。実デコーダのCPU/メモリ/時間制御とobject storageはBE/環境レビュー対象。
 
 ## カートと注文
 
@@ -39,20 +39,13 @@ checkoutは本人/event/shopの確認中1件とカート版を再確認し、最
 
 ## 集計・CSV・照合
 
-期間はUTCのstart含む/end含まず、画面はAsia/Tokyo。支払いは支払成立時刻、返金は返金成立時刻で別集計し、返金だけの期間の純額は負数を許す。AggregateAmount/AggregateCountは桁を限定せず、差異/純額はSignedAggregateAmount。1取引30桁の上限を合計へ流用しない。
+期間はUTCのstart含む/end含まず、画面はAsia/Tokyo。支払いは支払成立時刻、返金は返金成立時刻で別集計し、返金だけの期間の純額は負数を許す。sales_basisで発生時集計と元決済期間再集計を区別し、getSalesBreakdownで店舗別・商品数量・注文経路別の内訳をページングする。範囲と例は[CSV契約](csv-contract.md)。AggregateAmount/AggregateCountは桁を限定せず、差異/純額はSignedAggregateAmount。1取引30桁の上限を合計へ流用しない。
 
-CSV申込はevent/shop/dataset・条件・snapshotを固定する。生成中は本人最大2件。10万行ごとに分割し、超過分を切り捨てない。UTF-8 BOM、CRLF、RFC4180引用、数式開始/制御文字への対策を適用。金額は完全な10進原文を残すが、表計算ソフトで数値扱いした場合の精度は保証しない。
+CSV申込はevent/shop/dataset・条件・列版を固定し、snapshot_idを予約する。読取時点snapshot_atは生成開始時、generated_atは全part確定時、expires_atはgenerated_at+24h。本人生成中は最大2件、データ10万行ごとに分割し末尾を切り捨てない。0件もヘッダーだけのpart1を生成する。
 
-| dataset | 列の許可リスト |
-| --- | --- |
-| TRANSACTIONS | transaction_id/event_id/shop_id、type、成立UTC時刻、amount/currency、source_transaction_id。actor個人情報は含めない |
-| SALES | event_id/shop_id、期間、snapshot_id、売上/返金/純額、件数。期間ごとの集計 |
-| ORDERS | order_id/番号、event_id/shop_id、経路、支払/提供/返金状態、成立時刻、固定商品名/単価/数量/明細総額、元transaction_id |
-| CASH | event_id、処理/現金移動ID、種別、額、成立/記録時刻、状態、実査/理論/差異。証跡全文/連絡先/秘密は含めない |
+列順・列版の正本はOpenAPIのx-csv-contract。行の意味、型別数式対策、UTF-8 BOM/CRLF/引用、空結果、時刻・並び順は[CSV契約](csv-contract.md)。TRANSACTIONSは1成立取引、SALESは1店舗集計、ORDERSは1注文明細、CASHは1担当者・受付場所の現金集計。金額は完全な10進原文を残すが、表計算ソフトで数値扱いした場合の精度は保証しない。
 
-CSV各partのrow_countは10万以内、全体件数は文字列。行の並びは対象の成立/記録UTC時刻・ID昇順。注文は1明細1行で金額種別を明示し、注文総額を明細ごとに合算しない。snapshot内で複数partを連続分割する。一般一覧のカーソルをCSV snapshotとして使わない。
-
-GET状態とpart downloadは作成本人AND現在の元scope/dataset権限を毎回検証する。生成完了から24hでファイル削除。認可プロキシ配信とし、権限解除後も通る恒久署名URLを返さない。再生成は新snapshot/new jobで履歴を保持する。
+Exportは先頭最大100partの参照を返し、残りはlistExportPartsでindex昇順に取得する。GET状態・part一覧・downloadは作成本人AND現在の元scope/dataset権限を毎回検証する。生成完了から24hでファイル削除し、期限後のメタデータに取得参照を返さない。認可プロキシ配信、ASCII生成ファイル名とし、Range再開は使わない。再生成は新snapshot/new jobで履歴を保持する。一般一覧のカーソルをCSV snapshotとして使わない。
 
 照合は訂正を反映した純チャージ−純現金払戻しと、wallet3区分＋店舗純売上＋失効の式、全台帳合計0を同じsnapshotで確認。現金実査差異と未解決案件数は別の判定。差異があればbalanced=falseを返し、内部の警報/安全停止を監査付きで実施する。報告APIが返ったことを安全な再開の証明にしない。
 

@@ -12,7 +12,9 @@
 
 [現行要件](../../requirements/event_payment_requirements.md)第22章を基準とする。型と各パスは[OpenAPI](openapi.yaml)を参照する。本文の具体化はレビュー前の設計案。[OpenAPI 3.1.0仕様](https://spec.openapis.org/oas/v3.1.0.html)に従い記述する。
 
-HTTPS、UTF-8 JSON、`/v1`を使用する。業務フィールドは既存詳細設計のJSON案に合わせsnake_case、operationIdはcamelCase。未知の入力フィールド/クエリを422で拒否する。成功はGET/版付き更新/解除200、作成201、非同期受付202を基本とする。認証callbackは302。各操作のOpenAPI応答を優先し、削除/解除でも現在状態を返す案とした。詳細設計の一般的なPOST201/削除204からの具体化はADR-0003に記録する。
+HTTPS、UTF-8 JSON、`/v1`を使用する。業務フィールドは既存詳細設計のJSON案に合わせsnake_case、operationIdはcamelCase。未知の入力フィールド/クエリを422で拒否する。外部OAuth callbackの未知拡張queryだけは制限内で無視し、state/code/errorと同名重複を検証する。成功はGET/版付き更新/解除200、作成201、非同期受付202を基本とする。認証callbackは302。各操作のOpenAPI応答を優先し、削除/解除でも現在状態を返す案とした。詳細設計の一般的なPOST201/削除204からの具体化はADR-0003に記録する。
+
+本文サイズ・JSON構文/深さ・multipart/画像資源・エラーコードとfield_errors・契約リビジョンの正本は[HTTP入力・互換性](http-contract.md)とOpenAPI拡張。旧画面でもREAD/RECOVERYと既成立の同キー復帰を維持し、新規CURRENTだけ更新を要求する。画面更新・通信断・認証の順序は[画面復帰](client-flows.md)。これらの具体値と手順は[ADR-0004](../../adr/0004-api-client-recovery-and-wire-contracts.md)の提案。
 
 個人・認証・残高・取引・注文の応答はエラーも含め`Cache-Control: no-store`。Service Workerはnetwork-onlyとし、古い応答で成立を否定しない。GETは金銭確定・秘密発行を行わない。期限切れ予約の正本再評価/内部解放は業務Txで直列化し、金銭成立と競合させない。公開APIも現案はno-storeとし、将来の公開キャッシュ採用時も掲載解除の最大60秒を守る。
 
@@ -54,7 +56,7 @@ scope省略時はMINE。SHOPはshop_id必須、MINE/EVENTではshop_id拒否。S
 
 ## ページング・エラー
 
-一般一覧は標準20件、その他一覧は標準50件、最大100件、サーバーの`occurred_at DESC, transaction_id DESC`順。カーソルは不透明とし、actorまたはPUBLIC/event/scope/フィルター/並び順に束縛する。次ページでも現在の権限を再検証する。カーソルはbase64urlで包んだHMAC検証付きペイロード、期限30minを提案する。サーバー内部の最終ソート値・条件hash・scope・期限だけを持ち、FEは復号/生成しない。改ざん/期限/条件差替えは422、再取得へ。署名鍵の配布/ローテーションはBE環境設計で確認する。通常一覧はページごとの現在値で、CSVの固定snapshotとは区別する。金額や残高の正本確認を一覧の有無だけで行わない。
+一般一覧は標準20件、その他一覧は標準50件、最大100件。履歴はサーバーの`occurred_at DESC, transaction_id DESC`順、CSV partはindex昇順など各操作の並び順を優先する。カーソルは不透明とし、actorまたはPUBLIC/event/scope/フィルター/並び順に束縛する。次ページでも現在の権限を再検証する。カーソルはbase64urlで包んだHMAC検証付きペイロード、期限30minを提案する。サーバー内部の最終ソート値・条件hash・scope・期限だけを持ち、FEは復号/生成しない。改ざん/期限/条件差替えは422、再取得へ。署名鍵の配布/ローテーションはBE環境設計で確認する。通常一覧はページごとの現在値で、CSV/集計内訳の固定snapshotとは区別する。金額や残高の正本確認を一覧の有無だけで行わない。
 
 | HTTP | 主なcode・対応 |
 | --- | --- |
@@ -67,7 +69,7 @@ scope省略時はMINE。SHOPはshop_id必須、MINE/EVENTではshop_id拒否。S
 | 503 | DEPENDENCY_UNAVAILABLE / DB_UNAVAILABLE：正本へ接続回復後に同じキーで照会 |
 | 500 | INTERNAL_ERROR：request_idで調査。成立/未成立を断定しない |
 
-code/message/request_id/retryableと任意のcurrent_state_or_queryを共通型とする。retryableはその要求を再試行できる意味で、新キーによる金銭処理の許可ではない。キー付きコマンドは処理中・結果不明202 Error、業務競合409とし現在資格内の照会先を返す。CSV/失効run申込の202はjobまたはErrorのoneOfで区別し、受付済みjobを金銭処理中のエラーにしない。内部SQL/stack/資格情報を返さない。
+code/message/request_id/retryableと任意のcurrent_state_or_query、field_errors、update_hintを共通型とする。コードとHTTP/retryable/画面動作の対応はOpenAPIのx-error-catalogを優先する。retryableはその要求を再試行できる意味で、新キーによる金銭処理の許可ではない。キー付きコマンドは処理中・結果不明202 Error、業務競合409とし現在資格内の照会先を返す。CSV/失効run申込の202はjobまたはErrorのoneOfで区別し、受付済みjobを金銭処理中のエラーにしない。内部SQL/stack/資格情報を返さない。
 
 ## 秘密の発行と自然一意
 

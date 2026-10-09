@@ -9,7 +9,7 @@
 
 ## 論理APIからHTTP契約への対応
 
-基本設計の全58論理IDを168 HTTP操作へ具体化した。型・認可・状態・エラーは[OpenAPI](openapi.yaml)に記載。以下はoperationIdの索引で、網羅チェックはIDの対応を検証する。実装・業務ルール・試験合格の証明ではない。
+基本設計の全58論理IDを171 HTTP操作へ具体化した。型・認可・状態・エラーは[OpenAPI](openapi.yaml)に記載。以下はoperationIdの索引で、網羅チェックはIDの対応を検証する。実装・業務ルール・試験合格の証明ではない。
 
 | 論理API ID | operationId |
 | --- | --- |
@@ -63,14 +63,14 @@
 | O03 | `updateOrderFulfillment` |
 | O04 | `requestOrderCancellation`、`getOrderCancellation`、`decideOrderCancellation` |
 | O05 | `issueOrderReceipt` |
-| R01 | `getSalesReport` |
+| R01 | `getSalesReport`、`getSalesBreakdown` |
 | R02 | `createPurchaseRefundRequest`、`listPurchaseRefunds`、`getPurchaseRefund`、`executePurchaseRefund` |
 | R03 | `createExport` |
-| R04 | `listMyExports`、`getExport`、`downloadExportPart` |
+| R04 | `listMyExports`、`getExport`、`listExportParts`、`downloadExportPart` |
 | R05 | `getReconciliation`、`listAuditEvents` |
 | W01 | `getMyWallet` |
 | W02 | `getMyWalletActivity` |
-| N01 | `subscribeEventUpdates` |
+| N01 | `subscribeEventUpdates`、`getClientPolicy` |
 
 T02の汎用transactions POSTは、権限・本人承認を固定した各領域の確定操作へ分解した。Q04の詳細はevent配下へ統一。S02の招待秘密はPOST本文、O05の受取秘密発行はPOSTに具体化。A05は単一サービスの制御パス。これらは[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)のレビュー案。
 
@@ -87,17 +87,28 @@ T02の汎用transactions POSTは、権限・本人承認を固定した各領域
 | 個人情報削除・バックアップ復元 | 精算前は409、受理後30日。残る取引保持と削除/失効再適用を分離 |
 | 照合差異検出/復旧 | reportは差異を返し、内部警報/安全停止は監査付き。照合前に再開しない |
 
-## 確定前に残る項目
+## DBの完成を待たず具体化した範囲
 
-| 項目 | 担当と完了証拠 |
+| 範囲 | レビューできる成果物 |
 | --- | --- |
-| Cookie/CSRF/OAuth/GoogleのみのTOTP、ログインchallenge | BE。固定したBetter Auth版/SDK/adapterで統合試験、FEの画面復帰確認 |
-| DTO enum/公開ID/版、GLOBALキー、紛争保全、現金scope | API・DB。物理モデルとの対応表・制約/競合試験 |
-| CSV snapshot/cutoff、SSE再開/保持・カーソル鍵 | BE・DB。欠落/権限解除/同時更新の実証、方式と実値を記録 |
-| 自動失効workerの承認/起動認証 | BE・運営。特権MFAと事前設定条件を満たす手順/実装、重複実行/保全試験 |
-| 画像デコード資源上限/ストレージ/メール配送 | BE・環境担当。実装上限・契約/秘密分離・異常画像/配送試験 |
-| QR256bit、受取300s、再認証/短命フロー期限、回復コード10個、カーソル30min | FE・BE・DB。ADR-0003の具体値をレビューして採択 |
-| 金銭・認可・期限のDB同時実行、切断後復帰、実機/CSV/性能 | FE・BE。該当AT証跡。形式チェックで代替しない |
-| G1〜G5と運営責任者/保存・終了体制 | 総合・実運営責任者。実際の外部確認/契約/試験証跡。APIだけで承認しない |
+| 要求/応答・認可・状態・元キー復帰 | 全58論理IDを171操作へ対応。金銭の中間状態と最終結果、62キー操作の照会、秘密の単回発行を定義 |
+| HTTP入力・コード・旧画面 | サイズ/深さ/画像資源案、400/413/415/422、54コードのHTTP/画面対応、client-policy、READ/RECOVERY/CURRENTと既成立復帰は[HTTP契約](http-contract.md) |
+| 認証と通知の画面復帰 | Google開始flow_idと検証済み照会、失われたlogin challenge、SSE/GET世代・dirty再取得・poll/更新待機は[画面復帰](client-flows.md) |
+| 集計・CSVの表示契約 | 売上の発生時/原決済期間再集計、店舗/商品数量/注文経路の行、列版/順序、生成開始/完了時刻、空結果/分割/partページング/配信は[CSV契約](csv-contract.md) |
+| 形式/意味の設計検証 | schema状態ケース、HTTP入力/互換性/期間帰属/CSV参照手順、故意に壊したlint仕様を[保存して再実行](validation/README.md) |
 
-現在は全領域の初稿が揃った段階。資料レビュー・ADR採択・実装/受入・公開ゲートは未完了。要件変更が必要な判断はCR手順へ戻す。承認者・日付・PR：未記入。
+これらはAPI側の設計案を具体化した状態。未採択の値・追加判断はADR-0003/0004へ記録し、実アプリで成立した動作としては扱わない。
+
+## 確定前に残るレビュー・実証
+
+| 区分 | 項目 | 担当と完了証拠 |
+| --- | --- | --- |
+| FE/BEの契約レビュー | 戻り先ルート、Googleログインchallenge方針、旧画面のRECOVERY、集計/CSV表示、具体値 | FE・BE。ADR-0002/0003/0004採択と正本反映。期限/JSON/画像/再接続値の合意 |
+| 認証基盤・環境統合 | Cookie/CSRF/OAuth/GoogleのみTOTP、メール・画像/資源保護、カーソル鍵 | BE・環境。固定Better Auth版/SDK/adapter統合、異常画像/配送/実ブラウザー試験 |
+| DBとの共同調整 | DTO enum/公開ID/版、GLOBALキー、自然一意/ロック、紛争保全/現金scope | API・DB。物理モデル対応表・制約/競合試験。DDLはDB担当が作成 |
+| DBとの共同調整 | CSV/集計snapshot保持とcutoff、SSE配信位置/保持/順序 | BE・DB。同一job/ページの時点保持、欠落/権限解除/同時更新の実証、方式/実値の記録 |
+| 運営・実装の調整 | 自動失効workerの承認/起動認証、因子喪失時サポート | BE・運営。特権MFA/事前設定を満たす手順と重複実行/保全試験 |
+| 実装後の受入 | 金銭/認可/期限の同時実行、切断後復帰、実機/CSV/性能/削除 | FE・BE。該当AT証跡。設計用の形式チェックでは代替しない |
+| 公開判断 | G1〜G5、責任者/保存・終了体制 | 総合・運営。外部確認/契約/試験の実証。API設計だけで承認しない |
+
+DBに依存しない公開契約は担当間レビューへ進められる。資料承認・ADR採択・DB整合・実装/受入・公開ゲートは未完了。要件変更が必要な判断はCR手順へ戻す。承認者・日付・PR：未記入。

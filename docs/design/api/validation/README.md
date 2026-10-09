@@ -3,6 +3,8 @@
 状態：設計用チェック。担当：natuki53。更新日：2026-10-09。
 [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8)。
 
+API構造・入力/状態・設計上の復帰/CSV参照手順を確認する。実サーバーやDBを起動する試験ではない。
+
 ## 再実行
 
 リポジトリのルートから実行する。アプリの依存関係とは別の一時環境を使う。requirements.txtは検証で利用した版を固定したもので、アプリの技術選定ではない。
@@ -11,12 +13,13 @@
 python3 -m venv /tmp/fespay-api-contract-check
 /tmp/fespay-api-contract-check/bin/python -m pip install -r docs/design/api/validation/requirements.txt
 /tmp/fespay-api-contract-check/bin/python docs/design/api/validation/validate_contract.py
+/tmp/fespay-api-contract-check/bin/python docs/design/api/validation/validate_wire.py
 /tmp/fespay-api-contract-check/bin/python docs/design/api/validation/validate_lint.py
 npx --yes @redocly/cli@2.60.0 lint docs/design/api/openapi.yaml
 git diff --check
 ```
 
-スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、全58論理API ID、更新操作のCookie/CSRF宣言、62キー付き操作のEVENT/GLOBAL別照会網羅も確認する。認証/秘密発行などキー記録を使わない操作は用途・単回消費の契約を確認する。292ケースの形式/状態確認はvalidate_contract.pyとcontract_cases.pyへ保存。SSE例のevent/data/idを分解し、dataのJSON型とresource.changedのUUIDも確認する。
+スキーマはJSON Schema 2020-12として、UUID/日時formatも検証する。YAML重複キー、全ローカル参照、operationIdの一意性、pathパラメータ、参照要件/受入ID、資料リンク、全58論理API ID、更新操作のCookie/CSRF宣言、62キー付き操作のEVENT/GLOBAL別照会網羅も確認する。認証/秘密発行などキー記録を使わない操作は用途・単回消費の契約を確認する。378ケースの形式/状態確認はvalidate_contract.py、contract_cases.py、extension_cases.pyへ保存。SSE例のevent/data/idを分解し、dataのJSON型とresource.changedのUUIDも確認する。
 
 ## 確認する異常系
 
@@ -29,10 +32,16 @@ git diff --check
 | ACC/SEC/STF / AT-001～007/011～016 | PW境界、safe return_path、認証手段の型、TOTP/code、grantのrole/shop/register組合せ |
 | PAY/CHG/TRF / AT-025～040 | A/B/C入力の分離、本人承認true、現金受領/返却状態と成立ID、固定譲渡入力 |
 | INV/ORD / AT-046/049～053 | 再販戻しの元明細/true確認、32bit/50明細/数量境界、受取証明、全取消の返金参照 |
-| RPT / AT-055～057 | 集計31桁超と負純額、CSV READYの必須part/件数/期限、期限切れのdownload参照禁止 |
+| RPT / AT-055～057 | 集計31桁超と負純額、集計基準と行dimensionの一致、商品数量へ金額フィールド混在拒否、CSV状態の必須時点/part/件数/期限と取得参照禁止 |
 | NET-04 / AT-037/062 | 変更可能リソースのSSE version必須、秘匿対象の存在を理由に含めない再同期型 |
 
 静的チェックはサーバーの認可・残高計算・元決済との一致・返金累計・同時実行・通信断・実機・性能を検証しない。特に、同じ元明細IDの重複、既返金累計超過、現在の担当/MFA、調査解決証跡、停止中の操作許可は実装後の受入試験で確認する。受入管理表を合格へ更新する根拠にしない。
+
+## HTTP入力・互換性・CSVの参照検証
+
+validate_wire.pyはwire_reference.pyの設計用参照手順とOpenAPI拡張を照合する。69ケースでJSON byte/深さ/ノード境界と不正構文、旧版の新規拒否/既成立復帰/現金完了と現在認可、CSV時刻/件数/分割/空結果/引用/式対策/大桁原文、返金発生時と原決済期間再集計を確認する。全171操作の応答ヘッダー/入力上限/改訂ポリシー、54コードのHTTP/retryable、18操作のRECOVERY許可リストと初期配信設定も照合する。
+
+参照手順はアプリのhandler/DB集計ではない。Pythonの制限/文字列処理が通ったことは実デコーダ資源、プロキシ、Better Auth、ブラウザーEventSource、CSV生成時間・期限削除を証明しない。
 
 ## ライセンス・Google認証・更新通知の検証
 
@@ -42,8 +51,9 @@ git diff --check
 | --- | --- |
 | 公開条件 | 当面は[権利留保](../../../../LICENSE)。OSS利用許諾は付与しない。OpenAPIのlicense.nameと独自識別子LicenseRef-FesPay-All-Rights-Reservedを記載。README・権利表示との一致も検証。info-license/info-license-strictはerror |
 | Google callback | ブラウザー遷移専用GETの成功は302。組込みoperation-2xx-responseをFesPayのoperation-success-responseへ置き換え、全操作で2xxを必須とし、この正確なパスのGETだけ302を要求する。operationId、必須LocationのReturnPath参照、Cache-Control: no-storeも検証。302欠落や形式だけの200追加はerror |
+| OAuth callback query | x-query-schemaをSchema参照として登録。code/errorの片方とstate必須、外部未知拡張は上限付きで無視。参照切れ/参照削除を検出する |
 | SSE更新通知 | HTTPのtext/event-streamはstringのまま維持。x-event-data-schemasをSchemaの型参照として登録し、参照解決・構造・未使用検出の対象にする。ResourceChanged/ResyncNoticeを標準のJSON応答として偽装しない。no-unused-componentsはerror |
 
-validate_lint.pyは同じCLIと設定で正本のエラー/警告/無視がすべて0であることを確認する。続いて一時ファイルだけを変更し、通常APIの200欠落・302置換、callbackの302欠落・200追加・Location欠落/任意文字列化・no-store欠落、SSEの参照切れ・使用参照削除、別の未使用型、license欠落の11件がすべてエラーになることを確認する。検証途中のAPI仕様をリポジトリへ書き戻さない。
+validate_lint.pyは同じCLIと設定で正本のエラー/警告/無視がすべて0であることを確認する。続いて一時ファイルだけを変更し、通常APIの200欠落・302置換、callbackの302欠落・200追加・Location欠落/任意文字列化・no-store欠落、SSEの参照切れ・使用参照削除、別の未使用型、license欠落の13件（OAuth query参照切れ/使用参照削除も含む）がすべてエラーになることを確認する。検証途中のAPI仕様をリポジトリへ書き戻さない。
 
 型拡張・専用ルールは[Redoclyの型拡張](https://redocly.com/docs/cli/custom-plugins/extended-types)と[ルール作成](https://redocly.com/docs/cli/custom-plugins/custom-rules)の仕組みを利用する。公開条件の記述には[OpenAPI 3.1のLicense Object](https://spec.openapis.org/oas/v3.1.0.html#license-object)を用いる。権利留保は当面の公開方針で、将来のOSS採用はチームの決定として別途反映する。

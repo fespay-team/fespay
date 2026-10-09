@@ -127,12 +127,13 @@ def run_cases(check):
     check('DecideOrderCancellation', {'expected_version': '1', 'outcome': 'REJECT', 'reason': '提供可能'})
     check('CallingBoard', {'shop_id': rid, 'items': [{'order_number': 'TEST-001', 'fulfillment_status': 'READY'}], 'next_cursor': None, 'checked_at': ts})
     check('CallingBoard', {'shop_id': rid, 'items': [{'order_number': 'TEST-001', 'fulfillment_status': 'READY', 'display_name': '秘密'}], 'next_cursor': None, 'checked_at': ts}, False)
-    export = {'export_id': rid, 'event_id': rid, 'creator_account_id': rid, 'dataset': 'SALES',
-              'filter': {'scope': 'EVENT', 'start': ts, 'end': ts, 'display_timezone': 'Asia/Tokyo'},
+    export = {'export_id': rid, 'event_id': rid, 'creator_account_id': rid, 'dataset': 'SALES', 'csv_schema_version': '1',
+              'filter': {'scope': 'EVENT', 'start': ts, 'end': '2026-10-10T00:00:00Z', 'display_timezone': 'Asia/Tokyo', 'sales_basis': 'OCCURRENCE'},
               'status': 'QUEUED', 'snapshot_id': rid, 'created_at': ts, 'checked_at': ts}
     check('Export', export)
     check('Export', dict(export, status='READY'), False)
-    ready = dict(export, status='READY', row_count='9007199254740993', expires_at=ts,
+    ready = dict(export, status='READY', row_count='100000', snapshot_at=ts, generated_at=ts,
+                 expires_at='2026-10-10T00:00:00Z', part_count='1', next_parts_cursor=None,
                  parts=[{'part_id': rid, 'index': 1, 'row_count': 100000, 'download_path': '/v1/exports/fixture/parts/fixture/download'}])
     check('Export', ready)
     check('Export', dict(ready, status='EXPIRED'), False)

@@ -64,6 +64,7 @@ module.exports = function fespayPlugin() {
             properties: {
               ...types.Operation.properties,
               'x-event-data-schemas': 'EventDataSchemas',
+              'x-query-schema': 'Schema',
             },
           },
         };

@@ -64,6 +64,11 @@ case('removed SSE use is detected', 'no-unused-components',
 case('an unrelated unused schema is detected', 'no-unused-components',
      lambda d: d['components']['schemas'].update({'UnusedFixture': {'type': 'string'}}))
 case('rights metadata is missing', 'info-license', lambda d: d['info'].pop('license'))
+case('OAuth query reference is broken', 'no-unresolved-refs',
+     lambda d: d['paths'][callback_path]['get']['x-query-schema'].update(
+         {'$ref': '#/components/schemas/MissingQuery'}))
+case('removed OAuth query use is detected', 'no-unused-components',
+     lambda d: d['paths'][callback_path]['get'].pop('x-query-schema'))
 
 with tempfile.TemporaryDirectory(prefix='fespay-api-lint-') as directory:
     for index, (name, expected_rule, changed) in enumerate(cases):

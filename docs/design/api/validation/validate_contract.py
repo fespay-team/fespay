@@ -229,6 +229,8 @@ for resource_type in ['cash_refund','purchase_refund']:
     check('ResourceChanged', {'resource_type':resource_type, 'resource_id':rid, 'version':'2'})
 from contract_cases import run_cases
 run_cases(check)
+from extension_cases import run_cases as run_extension_cases
+run_extension_cases(check, doc)
 print(f'Total schema examples and edge cases: {checks} passed')
 print(f'Keyed command security and result lookup coverage: {sum(map(len, keyed_ids.values()))} operations passed')
 print(f'Basic design logical API coverage: {len(logical_ids)} IDs passed')

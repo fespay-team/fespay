@@ -63,6 +63,8 @@ API担当はHTTP入力/応答/権限/エラー/再送を定義し、DB担当は[
 | 完了/削除 | 全残高/拘束/未決cash/refund/order/失効/差異を再照合。取引親のcascade delete不可 |
 | 退会/復元 | 30日後の個人情報分離と取引7年保持を分け、復元後に削除/失効を再適用 |
 
+[HTTP入力・互換性](http-contract.md)、[画面復帰](client-flows.md)、[CSV列・配信](csv-contract.md)は物理モデルを指定せずAPI側で具体化した。client-policyは公開配信設定でDB保存を前提にしない。CSVのsnapshot_id予約は実際の読取開始とは分け、生成開始時のsnapshot_atを同じjobの再試行でも保持できる方式をDB担当と検証する。
+
 ## 次のレビューと実証
 
 OpenAPIの型・enum・自然一意と物理モデルを合わせ、GLOBAL結果保持、cash operationの公開ID共通namespace、CSV snapshot/cutoff、紛争保全額、失効workerの承認/起動認証、Outbox再開位置を重点レビューする。公開API案が揃ったことを、これらのDB実装や承認の完了とは扱わない。
