@@ -18,6 +18,6 @@ macOS arm64、Node.js 24.7.0 / npm 11.5.1、PostgreSQL 16.12、Better Auth 1.7.7
 
 ## CIと受入境界
 
-GitHub Actionsの対象headの結果はPRへ記録する。Linux/macOS/Windowsで型/build/基本試験、Linuxで設計/DB/auth統合を実行する。ワークフロー作成をCI成功の証拠にしない。
+[CI run 38375832365](https://github.com/fespay-team/fespay/actions/runs/38375832365)はce9bf809a9762ad55323ee0968bf36887bec98e7で全4job成功。最終headの結果はPRへ記録する。Linux/macOS/Windowsで型/build/基本試験、Linuxで設計/DB/auth統合を実行する。ワークフロー作成をCI成功の証拠にしない。
 
 実メール配送・Google本人認証・TOTPの再利用/試行制限/回復コード、FesPayのCSRF・業務MFAアダプター、金銭/注文/在庫handler、実ブラウザー・実機/性能/復旧・運用migrationは未実施。Issue #12～14へ引き継ぎ、受入管理表を合格へ変更しない。

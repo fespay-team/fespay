@@ -1,6 +1,6 @@
 # DB・台帳設計
 
-状態：設計採択済み（2026-10-13、PR #9）。作業者：natuki53。DB担当：実名未割当。レビュー依頼：fespay-team/developers（作者以外のバックエンド担当）。更新日：2026-10-09。
+状態：設計採択済み（2026-10-13、PR #9）。作業者：natuki53。DB担当：実名未割当。レビュー依頼：fespay-team/developers（作者以外のバックエンド担当）。更新日：2026-10-13。
 [DB PR #9](https://github.com/fespay-team/fespay/pull/9)で管理する。基準は[現行要件v0.2](../../requirements/event_payment_requirements.md)、承認済み[CR-0001](../../requirements/changes.md)、[詳細設計](../detailed-design.md)。API参照は[PR #8](https://github.com/fespay-team/fespay/pull/8)の `120efcdc652d687534d2ced955625d6ac39147ee`、v0.4・171操作。APIはPR #8、追加物理モデルはPR #9で設計資料として採択済み。運用適用は別工程。
 
 | 資料 | 内容 |
@@ -14,7 +14,7 @@
 | [検証](validation/README.md) | 実DB境界/競合と参照版の静的検証 |
 | [レビュー確認票](review.md) | 承認対象・確認順・検証証跡・実装時の残件 |
 
-旧 `docs/design/db-*.md` の本文をここへ移した。実行用migrationは将来リポジトリ直下の `database/migrations/` に置く。現SQLは設計用であり、認証基盤の固定版・担当間採択・実handler/復旧/移行を確定してからmigrationへ昇格する。設計用と実行用のSQLを二重管理しない。
+旧 `docs/design/db-*.md` の本文をここへ移した。[開発用migration](../../../database/README.md)はmanifestで採択SQLを参照する。運用migrationへの昇格は別工程。現SQLは設計用であり、認証基盤の固定版・担当間採択・実handler/復旧/移行を確定してからmigrationへ昇格する。設計用と実行用のSQLを二重管理しない。
 
 API本文は[main採択版のOpenAPI](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/openapi.yaml)を参照し、別ブランチの全文をコピーしない。参照版の更新は対応表と検証を同じPRで更新する。
 
