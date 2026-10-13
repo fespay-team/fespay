@@ -1,7 +1,7 @@
 # DB・台帳設計
 
-状態：レビュー案。作業者：natuki53。DB担当：実名未割当。レビュー依頼：fespay-team/developers（作者以外のバックエンド担当）。更新日：2026-10-09。
-[DB PR #9](https://github.com/fespay-team/fespay/pull/9)で管理する。基準は[現行要件v0.2](../../requirements/event_payment_requirements.md)、承認済み[CR-0001](../../requirements/changes.md)、[詳細設計](../detailed-design.md)。API参照は[PR #8](https://github.com/fespay-team/fespay/pull/8)の `52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32`、v0.4・171操作。APIと追加物理モデルは採択前の案で、main承認済み仕様と区別する。
+状態：設計採択済み（2026-10-13、PR #9）。作業者：natuki53。DB担当：実名未割当。レビュー依頼：fespay-team/developers（作者以外のバックエンド担当）。更新日：2026-10-09。
+[DB PR #9](https://github.com/fespay-team/fespay/pull/9)で管理する。基準は[現行要件v0.2](../../requirements/event_payment_requirements.md)、承認済み[CR-0001](../../requirements/changes.md)、[詳細設計](../detailed-design.md)。API参照は[PR #8](https://github.com/fespay-team/fespay/pull/8)の `120efcdc652d687534d2ced955625d6ac39147ee`、v0.4・171操作。APIはPR #8、追加物理モデルはPR #9で設計資料として採択済み。運用適用は別工程。
 
 | 資料 | 内容 |
 | --- | --- |
@@ -16,6 +16,6 @@
 
 旧 `docs/design/db-*.md` の本文をここへ移した。実行用migrationは将来リポジトリ直下の `database/migrations/` に置く。現SQLは設計用であり、認証基盤の固定版・担当間採択・実handler/復旧/移行を確定してからmigrationへ昇格する。設計用と実行用のSQLを二重管理しない。
 
-API本文は[52ef2d4のOpenAPI](https://github.com/fespay-team/fespay/blob/52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32/docs/design/api/openapi.yaml)を参照し、別ブランチの全文をコピーしない。参照版の更新は対応表と検証を同じPRで更新する。
+API本文は[main採択版のOpenAPI](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/openapi.yaml)を参照し、別ブランチの全文をコピーしない。参照版の更新は対応表と検証を同じPRで更新する。
 
-関連作業：[Issue #10](https://github.com/fespay-team/fespay/issues/10)。承認者・日付はPRのレビュー記録で確定する。運用DB適用・受入試験・性能・法的公開判断：未実施。
+関連作業：[Issue #10](https://github.com/fespay-team/fespay/issues/10)。承認者：marron46・popoten0630-dev（対象8fe36cc）。承認・マージ日：2026-10-13。運用DB適用・受入試験・性能・法的公開判断：未実施。

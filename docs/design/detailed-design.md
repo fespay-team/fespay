@@ -11,7 +11,7 @@
 | 対象要件書 | [EPP-REQ-001](../requirements/event_payment_requirements.md)（現行v0.2、CR-0001承認済み） |
 | 版 | 0.2 |
 | 作成日 | 2026-10-01 |
-| ステータス | レビュー指摘修正案・再レビュー待ち |
+| ステータス | API/DB採択内容の参照同期（実装受入は別工程） |
 | 担当 | 未割当 |
 | レビュー者 | 未割当 |
 | 更新日 | 2026-10-07 |
@@ -82,7 +82,7 @@ packages/infrastructure/src/{postgres,storage,mail,auth,observability}
 database/{migrations,seeds}
 ```
 
-すべて**詳細設計上の補完**。FEはcontracts以外のserver内部モジュールに依存しない。domainはapplication/infrastructure/httpに依存しない。applicationはdomainとportに依存し、infrastructureがportを実装する。モジュラーモノリスを維持し、モジュール間の書込みはapplication use case経由とする。DB migrationはレビュー済みの順方向変更を基本とし、成立取引の削除・書換えをするrollbackを作らない。実際のworkspace/パッケージ管理ツールと配置は未決事項 U-06。
+すべて**詳細設計上の補完**。FEはcontracts以外のserver内部モジュールに依存しない。domainはapplication/infrastructure/httpに依存しない。applicationはdomainとportに依存し、infrastructureがportを実装する。モジュラーモノリスを維持し、モジュール間の書込みはapplication use case経由とする。DB migrationはレビュー済みの順方向変更を基本とし、成立取引の削除・書換えをするrollbackを作らない。workspace/パッケージ管理の準備案は[開発計画](../project/development-plan.md)とADR-0005で管理する。
 
 ## 5. 認証詳細設計
 
@@ -129,105 +129,21 @@ TOTPは30秒周期、±1周期、再利用不可、5回/5分失敗後15分停止
 
 権限と資源状態の読取り・業務更新を同一Tx内で行う。grant変更との競合はgrant行をFOR UPDATEでロックし、金銭確定と解除の順序を直列化する。結果照会と冪等再送の保存結果返却にも現在の本人所有/業務照会権限を検証する。解除済み担当者には業務結果を返さない。照会には新規処理の受付期間・機能OFF・販売終了の条件を流用せず、履歴と既存手続の安全な完了・取消・調査は操作別条件で許可する（ROL-06、CSH-04、TX-03～05）。
 
-## 7. データモデル物理設計
+## 7. DBの保存モデルと制約
 
-### 7.1 共通規約
+2026-10-13に[API PR #8](https://github.com/fespay-team/fespay/pull/8)と[DB PR #9](https://github.com/fespay-team/fespay/pull/9)を承認・マージした。旧30表の補完案は、公開契約との対応を具体化した55表の[DB設計](database/README.md)へ置き換える。本章に列・DDLを複製しない。
 
-以下の物理表は**詳細設計上の補完案**である。全表に`created_at timestamptz NOT NULL DEFAULT now()`、更新される表に`updated_at timestamptz NOT NULL DEFAULT now()`、必要な行に`version integer NOT NULL DEFAULT 1 CHECK(version>0)`を持たせる。金銭・監査履歴は論理削除しない。FKは原則`ON DELETE RESTRICT ON UPDATE RESTRICT`。参照不能な一時秘密は期限後削除。すべてのevent子表にevent_idを持たせ、複合FKでevent越境を防ぐ。IDの生成・UUID方式は未決。
+| 正本 | 確認する内容 |
+| --- | --- |
+| [物理スキーマ](database/physical-schema.md) / [ER](database/er-diagram.md) | 55表の全列・所属FK・一意・型、認証基盤/個人情報との分離 |
+| [API対応](database/api-mapping.md) | 171操作の保存先/導出元・Tx・自然一意 |
+| [台帳](database/ledger.md) | 内部勘定の符号、3区分射影、2行以上/均衡、追記専用、拘束/解放の元区分、排他順 |
+| [設計用SQL](database/sql/initial-schema-draft.sql) | scaleなしnumeric＋有限/整数/30桁domain、bigint版、部分一意、複合FK、遅延trigger |
+| [検証](database/validation/README.md) | PostgreSQL 16.12・通常app権限の104ケース、別キーの2接続在庫戻し競合 |
 
-### 7.2 テーブル定義
+accountsは業務ID、account_profilesとcontact_email_verificationsは削除可能な個人情報、identity/session/因子はBetter Authが所有する。ordersは元要求と同じevent/shop/payerに結合し、ITEMS/SUCCEEDEDと明細・要求・取引の合計を検査する。stock_movesはCORRECTIONの同値訂正だけdelta=0を許可する。cash_correctionsは返却4状態を保存する。
 
-省略なしの列一覧を示す。`NN`=NOT NULL、`?`=NULL可。UNIQUE/INDEX/CHECKも各行に記載する。単一列PKは`id UUID NN PK`で表す。
-
-| テーブル（論理名） | 列定義: `物理名 型 NULL DEFAULT 制約 —意味/値域` | 一意・検索・ライフサイクル |
-|---|---|---|
-| accounts（アカウント） | `id UUID NN`、`email CITEXT NN`、`email_verified_at timestamptz ?`、`status text NN 'ACTIVE'`、`display_name varchar(100) NN`、共通日時 | PK id、UNIQUE email、CHECK status ACTIVE/SUSPENDED/DELETION_PENDING。identity参照中削除不可。認証基盤との分離方法は未決 |
-| identities（外部認証） | `id UUID NN`、`account_id UUID NN`、`provider text NN`、`provider_subject text NN`、`created_at` | PK、FK accounts、UNIQUE(provider,provider_subject)、INDEX(account_id)。provider値メール/Google（Better Auth内部形式に合わせる） |
-| sessions（セッション） | `id UUID NN`、`account_id UUID NN`、`token_hash bytea NN`、`expires_at timestamptz NN`、`revoked_at timestamptz ?`、日時 | PK、FK accounts、UNIQUE token_hash、INDEX(account_id,expires_at)。期限後削除可能 |
-| events（イベント） | `id UUID NN`、`owner_account_id UUID NN`、`name varchar(100) NN`、`status text NN`、`listing_status text NN`、`participation_mode text NN`、`starts_at/ends_at timestamptz NN`、`settings jsonb NN '{}'`、`version int NN 1`、日時 | PK、FK accounts、CHECK時刻順・状態列挙、INDEX(status,starts_at,id)。業務履歴参照中削除不可 |
-| event_policies（条件版） | `id UUID NN`、`event_id UUID NN`、`version int NN`、`terms jsonb NN`、`effective_at timestamptz NN`、`created_by UUID NN`、`created_at` | PK、FK event/account、UNIQUE(event_id,version)、INDEX(event_id,effective_at)。append-only |
-| memberships（参加） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`status text NN 'ACTIVE'`、`accepted_policy_version int NN`、`joined_at timestamptz NN`、日時 | PK、複合一意(event_id,account_id)、FK event/account/policy。INDEX(account_id,status)。参加だけではgrantなし |
-| grants（権限付与） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`shop_id UUID ?`、`operation text NN`、`status text NN`、`granted_by UUID NN`、`version int NN 1`、日時 | PK、FK event/account/shop、7.4のshop NULL/非NULL別の部分一意索引、INDEX(event_id,shop_id,status)。同一scope/operationは状態にかかわらず1行、再付与はversion更新＋監査。親発行者削除に依存しない |
-| invitations（招待） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID ?`、`token_hash bytea NN`、`email CITEXT NN`、`grant_spec jsonb NN`、`status text NN`、`expires_at timestamptz NN`、`created_by UUID NN`、`accepted_by UUID ?`、日時 | PK、UNIQUE token_hash、INDEX(event_id,status,expires_at)。72h・一回限り、秘密ハッシュは失効30日後削除 |
-| shops（店舗） | `id UUID NN`、`event_id UUID NN`、`name varchar(100) NN`、`description varchar(1000) NN ''`、`status text NN`、`suspension jsonb NN '{}'`、`version int NN 1`、日時 | PK、UNIQUE(event_id,id)、INDEX(event_id,status)。参照履歴があれば削除不可 |
-| registers（レジ） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`register_code varchar(64) NN`、`status text NN`、`assigned_account_id UUID ?`、日時 | PK、複合FK(event_id,shop_id)、UNIQUE(shop_id,register_code)、INDEX(shop_id,status) |
-| wallets（残高射影） | `id UUID NN`、`event_id UUID NN`、`account_id UUID NN`、`available_amount numeric(30,0) NN 0`、`held_amount numeric(30,0) NN 0`、`refund_only_amount numeric(30,0) NN 0`、`version bigint NN 1`、日時 | PK、UNIQUE(event_id,account_id)、UNIQUE(event_id,id)、複合FK membership、CHECK各額>=0、INDEX(event_id,account_id)。台帳から再構築可能な射影 |
-| holds（払戻し拘束） | `id UUID NN`、`event_id UUID NN`、`wallet_id UUID NN`、`cash_operation_id UUID NN`、`source_bucket text NN`、`hold_transaction_id UUID NN`、`release_transaction_id UUID ?`、`amount numeric(30,0) NN`、`status text NN`、`expires_at timestamptz NN`、`version int NN 1`、日時 | PK、複合FK event/wallet/operation/transaction、CHECK amount>0、CHECK source_bucket IN('AVAILABLE','REFUND_ONLY')、UNIQUE(cash_operation_id)、INDEX(event_id,status,expires_at)。HELD時に作成、元区分を保持し取消は同区分へ戻す。自動解除禁止 |
-| transactions（取引） | `id UUID NN`、`event_id UUID NN`、`type text NN`、`status text NN 'SUCCEEDED'`、`amount numeric(30,0) NN`、`actor_account_id UUID NN`、`source_ref UUID ?`、`occurred_at timestamptz NN`、`idempotency_id UUID NN`、`metadata jsonb NN '{}'`、`created_at` | PK、UNIQUE(event_id,id)、FK event/account/idempotency、CHECK amount>0、INDEX(event_id,occurred_at DESC,id)、INDEX(source_ref)。確定後更新/削除禁止 |
-| ledger_entries（台帳明細） | `id UUID NN`、`event_id UUID NN`、`transaction_id UUID NN`、`account_code text NN`、`wallet_id UUID ?`、`amount numeric(31,0) NN`、`created_at` | PK、複合FK(event_id,transaction_id)、FK wallet、INDEX(event_id,transaction_id)、INDEX(wallet_id,created_at)。transaction内SUM(amount)=0は遅延制約triggerで検査。append-only |
-| idempotency_keys（冪等結果） | `id UUID NN`、`event_id UUID NN`、`actor_account_id UUID NN`、`operation text NN`、`key varchar(128) NN`、`request_hash bytea NN`、`result_resource_id UUID ?`、`response_snapshot jsonb ?`、`status text NN`、`created_at` | PK、UNIQUE(actor_account_id,event_id,operation,key)、INDEX(status,created_at)。取引保存期間保持 |
-| payment_requests（支払要求） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`register_id UUID ?`、`payer_account_id UUID ?`、`token_id UUID ?`、`type text NN`、`status text NN`、`amount numeric(30,0) NN`、`content_snapshot jsonb NN`、`content_hash bytea NN`、`expires_at timestamptz NN`、`version int NN 1`、`transaction_id UUID ?`、日時 | PK、複合FK shop/event、FK account/transaction、CHECK amount>0、CHECK type IN('A','B','C')、CHECK status<>'AWAITING_APPROVAL' OR payer_account_id IS NOT NULL、7.4のB承認待ち部分一意索引、INDEX(event_id,status,expires_at)。状態列挙は10章 |
-| tokens（用途限定token） | `id UUID NN`、`event_id UUID NN`、`purpose text NN`、`token_hash bytea NN`、`subject_account_id UUID ?`、`resource_id UUID ?`、`expires_at timestamptz NN`、`consumed_at timestamptz ?`、`revoked_at timestamptz ?`、日時 | PK、UNIQUE token_hash、INDEX(event_id,purpose,expires_at)。一回消費は条件付きUPDATE |
-| cash_operations（現金処理） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID ?`、`account_id UUID NN`、`operator_account_id UUID NN`、`type text NN`、`balance_source text ?`、`status text NN`、`amount numeric(30,0) NN`、`transaction_id UUID ?`、`external_fact text ?`、`reason text ?`、`version int NN 1`、日時 | PK、UNIQUE(event_id,id)、複合FK event/shop/transaction、FK accounts、CHECK amount>0、CHECK type<>'CASH_REFUND' OR (balance_source IS NOT NULL AND balance_source IN('AVAILABLE','REFUND_ONLY'))、7.4の未完了払戻し部分一意索引、INDEX(event_id,type,status,created_at)。通常/返金専用交付は共通type CASH_REFUNDで元区分を区別 |
-| cash_cases（現金調査案件） | `id UUID NN`、`event_id UUID NN`、`cash_operation_id UUID NN`、`status text NN`、`reason text NN`、`assigned_to UUID ?`、`resolved_at timestamptz ?`、`resolution jsonb ?`、日時 | PK、FK operation/account、INDEX(event_id,status,created_at)。解決履歴はAuditにも追記 |
-| products（商品） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`name varchar(100) NN`、`description varchar(1000) NN ''`、`price numeric(30,0) NN`、`status text NN`、`image_key text ?`、`version int NN 1`、日時 | PK、UNIQUE(event_id,shop_id,id)、複合FK shop、CHECK price>0、INDEX(shop_id,status,name)。物理削除不可、停止状態で保管 |
-| inventory（現在在庫） | `event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`on_hand bigint NN 0`、`reserved bigint NN 0`、`version bigint NN 1`、日時 | PK(event_id,product_id)、複合FK product/shop、CHECK 0<=reserved<=on_hand AND on_hand<=2147483647、INDEX(shop_id,product_id)。保持型bigintでもINV-03の32-bit非負整数範囲を超える値は拒否 |
-| stock_moves（在庫移動） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`kind text NN`、`refund_line_id UUID ?`、`idempotency_id UUID NN`、`delta bigint NN`、`reason text NN`、`actor_account_id UUID NN`、`created_at` | PK、複合FK product/shop/refund_line、FK idempotency、CHECK delta<>0、CHECK (kind='RETURN_TO_STOCK' AND refund_line_id IS NOT NULL AND delta>0) OR (kind<>'RETURN_TO_STOCK' AND refund_line_id IS NULL)、UNIQUE(idempotency_id,refund_line_id)、INDEX(event_id,product_id,created_at)、INDEX(event_id,refund_line_id)。append-only、再販戻しは元返金明細必須 |
-| stock_reservations（予約） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`product_id UUID NN`、`payment_request_id UUID NN`、`order_line_id UUID ?`、`quantity integer NN`、`status text NN`、`expires_at timestamptz NN`、`version int NN 1`、日時 | PK、FK product/request/order line、UNIQUE(payment_request_id,product_id)、CHECK quantity BETWEEN 1 AND 999、INDEX(event_id,status,expires_at) |
-| orders（注文） | `id UUID NN`、`event_id UUID NN`、`shop_id UUID NN`、`account_id UUID NN`、`transaction_id UUID ?`、`payment_request_id UUID ?`、`display_number varchar(32) NN`、`channel text NN`、`status text NN`、`fulfillment_status text NN`、`total_amount numeric(30,0) NN`、`version int NN 1`、日時 | PK、UNIQUE(event_id,shop_id,id)、UNIQUE(event_id,shop_id,display_number)、FK membership/shop/transaction/request、CHECK total>=0、INDEX(shop_id,status,created_at)、INDEX(account_id,created_at) |
-| order_lines（注文明細） | `id UUID NN`、`event_id UUID NN`、`order_id UUID NN`、`product_id UUID NN`、`product_name_snapshot varchar(100) NN`、`unit_price numeric(30,0) NN`、`quantity integer NN`、`line_total numeric(30,0) NN`、`product_version int NN`、`refunded_quantity integer NN 0`、日時 | PK、複合FK(order,event)、FK product RESTRICT、CHECK unit_price>0、quantity 1..999、line_total=unit_price*quantity、0<=refunded<=quantity、INDEX(order_id) |
-| refunds（返金） | `id UUID NN`、`event_id UUID NN`、`original_transaction_id UUID NN`、`refund_transaction_id UUID ?`、`order_id UUID ?`、`actor_account_id UUID NN`、`destination_bucket text NN`、`amount numeric(30,0) NN`、`status text NN`、`reason text NN`、`idempotency_id UUID NN`、日時 | PK、FK event/transaction/order/key、CHECK amount>0、CHECK destination_bucket IN('AVAILABLE','REFUND_ONLY')、INDEX(event_id,original_transaction_id)、成立累計は元取引ロック下で検証。成立時の返金先分類を保持 |
-| refund_lines（返金明細） | `id UUID NN`、`event_id UUID NN`、`refund_id UUID NN`、`order_line_id UUID NN`、`quantity integer NN`、`amount numeric(30,0) NN`、`restored_quantity integer NN 0`、日時 | PK、UNIQUE(event_id,id)、FK refund/line、CHECK quantity>0 AND amount>0、CHECK restored_quantity BETWEEN 0 AND quantity、INDEX(order_line_id)。返金数量・金額は成立後不変、復元済み数量だけ在庫戻しTxで更新する射影 |
-| audit（監査） | `id UUID NN`、`event_id UUID ?`、`shop_id UUID ?`、`actor_account_id UUID ?`、`action text NN`、`target_type text NN`、`target_id UUID ?`、`reason text ?`、`before_data jsonb ?`、`after_data jsonb ?`、`request_id text ?`、`ip inet ?`、`created_at timestamptz NN` | PK、INDEX(event_id,created_at)、INDEX(actor_account_id,created_at)、追記のみ。credential/token/不要個人情報禁止 |
-| outbox（後続配信） | `id UUID NN`、`event_id UUID ?`、`aggregate_type text NN`、`aggregate_id UUID NN`、`event_type text NN`、`payload jsonb NN`、`status text NN 'PENDING'`、`retry_count int NN 0`、`next_retry_at timestamptz NN now()`、`locked_at timestamptz ?`、`processed_at timestamptz ?`、`last_error_code text ?`、`created_at` | PK、UNIQUE(id)、CHECK retry_count>=0、INDEX(status,next_retry_at,created_at)。payloadに秘密を含めない |
-| exports（CSV成果物） | `id UUID NN`、`event_id UUID NN`、`requested_by UUID NN`、`snapshot_id UUID NN`、`filters jsonb NN`、`status text NN`、`object_key text ?`、`row_count bigint ?`、`expires_at timestamptz NN`、`error_code text ?`、日時 | PK、FK event/account、INDEX(requested_by,status)、24時間後削除 |
-
-`amount`のledgerは符号付きなので`numeric(31,0)`で差分を表し、各取引の絶対値は30桁以内。台帳合計ゼロ制約は複数行制約のため**詳細設計上の補完**として遅延constraint triggerでCOMMIT時に検証する。勘定科目コード一覧、残高射影と台帳の勘定マッピングはDDL確定時に固定する。
-
-### 7.3 関係・削除更新
-
-```mermaid
-erDiagram
-  ACCOUNTS ||--o{ MEMBERSHIPS : joins
-  EVENTS ||--o{ MEMBERSHIPS : has
-  EVENTS ||--o{ SHOPS : contains
-  SHOPS ||--o{ PRODUCTS : sells
-  PRODUCTS ||--|| INVENTORY : stock
-  PRODUCTS ||--o{ STOCK_MOVES : changes
-  PRODUCTS ||--o{ STOCK_RESERVATIONS : reserves
-  ACCOUNTS ||--o{ WALLETS : owns
-  EVENTS ||--o{ WALLETS : scopes
-  WALLETS ||--o{ HOLDS : locks
-  EVENTS ||--o{ TRANSACTIONS : records
-  TRANSACTIONS ||--|{ LEDGER_ENTRIES : posts
-  TRANSACTIONS ||--o{ PAYMENT_REQUESTS : settles
-  EVENTS ||--o{ ORDERS : receives
-  ORDERS ||--|{ ORDER_LINES : contains
-  TRANSACTIONS ||--o{ REFUNDS : corrected_by
-  REFUNDS ||--o{ REFUND_LINES : details
-  REFUND_LINES o|--o{ STOCK_MOVES : restored_by
-  EVENTS ||--o{ AUDIT : audits
-  EVENTS ||--o{ OUTBOX : emits
-```
-
-Membership (account,event)は一意、Walletも同一組で一意。ShopはEventの子、Register/Product/Orderはshop/event複合FKを持つ。Transactionは台帳明細を2件以上持ち、削除連鎖なし。Orderは複数line、Refundは複数refund_line。Reservationはrequest/product単位で一意、成立・期限切れ・取消の各処理で同じ行をロックする。履歴・金銭根拠がある行は物理削除しない。アカウント個人情報の分離はPRV-03～05と保存基準に従う。
-
-### 7.4 同時件数・scopeの一意制約
-
-次のSQLは7.2を具体化する**詳細設計上の補完案**。DDL/migration確定時に制約名・最終enumと一致させる。B方式は1利用者・1イベントの承認待ちを1件、現金払戻しは通常額/返金専用額を合わせて同時1件に制限する（PAY-B04、CSH-01）。
-
-```sql
-CREATE UNIQUE INDEX payment_requests_one_pending_b
-  ON payment_requests (event_id, payer_account_id)
-  WHERE type = 'B' AND status = 'AWAITING_APPROVAL';
-
-CREATE UNIQUE INDEX cash_operations_one_open_refund
-  ON cash_operations (event_id, account_id)
-  WHERE type = 'CASH_REFUND'
-    AND status IN ('PREPARED', 'HELD', 'CASH_HANDING', 'INVESTIGATING');
-
-CREATE UNIQUE INDEX grants_event_scope
-  ON grants (event_id, account_id, operation)
-  WHERE shop_id IS NULL;
-
-CREATE UNIQUE INDEX grants_shop_scope
-  ON grants (event_id, account_id, shop_id, operation)
-  WHERE shop_id IS NOT NULL;
-```
-
-B要求の関連付け時はwallet行、現金払戻し開始時もwallet行をロックして既存処理を再確認し、別キー・別端末・別担当の要求でも部分一意索引を最終防壁にする。競合は409 `INVALID_STATE`と認可済みの既存要求照会先を返す。同じ冪等キーの再送は9.3に従う。期限切れのB要求は要求・予約/在庫を共通順でロックし、実時刻で期限を確認してEXPIRED/予約解放を同一Txで確定してから新要求を作る。払戻しは警告期限を過ぎても拘束を自動解除せず、PAIDまたは未交付確認済みCANCELLEDまで新規開始を拒否する。PREPARED取消は未交付確認を記録し、拘束作成前なら残高移動は行わない。
-
-PostgreSQLの通常UNIQUEはNULLを同値にしないため、shop_idがNULLのイベント全体grantと非NULLの店舗grantを別々の部分一意索引で保証する。通常UNIQUE(event,account,shop,operation)だけには依存しない。再付与時は同じgrant行を更新してversion・監査を残し、重複行を増やさない（[公式の一意制約仕様](https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS)）。
+設計SQLは運用migrationではない。開発環境の検証は同じSQLを参照するmanifestで管理し、コピーを正本化しない。認証adapter、実handler/worker、移行/復旧/性能の実証後に運用へ昇格する。担当・残件は[開発計画](../project/development-plan.md)を参照する。
 
 ## 8. 金銭・台帳詳細設計
 
@@ -698,7 +614,7 @@ sequenceDiagram
 | SEC-07～11, PERF-01～13, OPS-01～06 | 29～32 | 3,16～20 | API/infra/observability | セキュリティ、性能、復旧 |
 | GOV/LEG/REL/DEV/CHGLOG | 1～3,30～36 | 1,20,23 | gate/運営/変更記録 | gate未完了公開防止 |
 
-## 23. 未決事項
+## 23. 未決事項・採択後の実装確認
 
 本表は基本設計35章U-01～U-17を引き継ぎ、本詳細設計で露呈した不足を追加する。推奨は案であり、決定扱いではない。
 
@@ -706,8 +622,8 @@ sequenceDiagram
 |---|---|---|---|
 | U-01 法的発行主体/法令該当性 | 基本設計未決。資金流れ・上限なし・譲渡・現金払戻しの評価必要 | 法務/関係機関確認を推奨 | 実金銭公開gate、wallet/transfer/cash |
 | U-02 運営責任者/終了後窓口 | 未割当 | 主催者・プラットフォーム責任境界を公開前に決定 | 問合せ/保存・公開gate |
-| U-03 OpenAPI、Cookie、OAuth callback | APIは論理案 | OpenAPI YAMLを正本化し本文重複を避ける（推奨） | UI/API契約 |
-| U-04 物理ER、UUID、分離レベル、勘定科目 | 本書は補完案 | PostgreSQL実機でDDL/競合試験し決定 | 全DB、金銭移行に注意 |
+| U-03 OpenAPI、Cookie、OAuth callback | PR #8 / ADR-0003で設計採択、実認証統合はIssue #13 | OpenAPI YAMLを正本化し本文重複を避ける（推奨） | UI/API契約 |
+| U-04 物理ER、UUID、分離レベル、勘定科目 | PR #9で保存モデル/勘定採択。UUID生成・実handler分離/性能はIssue #14 | PostgreSQL実機でDDL/競合試験し決定 | 全DB、金銭移行に注意 |
 | U-05 クラウド/リージョン/鍵/監視 | 未選定 | 要件RPO/RTOと契約を満たす構成を評価 | ARC/OPS |
 | U-06 package/runtime/lockfile | 実版未確定 | 対応期限までにADRとlockfile固定 | build・脆弱性更新 |
 | U-07 Google/メール配送 | 未契約 | 開発/本番分離し実機確認 | auth/通知 |
@@ -721,9 +637,9 @@ sequenceDiagram
 | U-15 最終HTTP error mapping/UI文言 | 未確定 | OpenAPIと文言表で固定 | clients |
 | U-16 現金実査/差異解消手順 | 運用責任未決 | 模擬運営後に手順確定 | 現金照合 |
 | U-17 表示注文番号/照合番号 | 詳細未決 | 推測困難性と現場読み上げ性を評価 | 受取・問い合わせ |
-| U-18 Membership/Shop/Register列挙、状態履歴 | 基本設計で全列挙なし | 有効/停止等の状態機械を要件照合後にDDL化 | 6,7,10章。勝手なenum確定不可 |
+| U-18 Membership/Shop/Register列挙、状態履歴 | API #8 / DB #9で語彙/変換を採択、実状態遷移はIssue #14 | 有効/停止等の状態機械を要件照合後にDDL化 | 6,7,10章。勝手なenum確定不可 |
 | U-19 token長/正確な乱数仕様、CSV signed URL TTL | QR強度・TTL未決 | 脅威評価と事業者仕様確認で決める | QR/ストレージ。URL公開漏えいを防ぐ |
-| U-20 PostgreSQL trigger実装/台帳勘定体系 | 本書の遅延triggerは補完 | migration・復元・並行Txで実証 | 台帳正本、後方互換注意 |
+| U-20 PostgreSQL trigger実装/台帳勘定体系 | PR #9で設計/制約104件を採択。運用昇格・復旧・負荷はIssue #14 | migration・復元・並行Txで実証 | 台帳正本、後方互換注意 |
 
 ## 24. 詳細設計で補完した事項
 
@@ -756,3 +672,5 @@ sequenceDiagram
 | セキュリティ/運用 | IDOR、CSRF、XSS、SQLi、SSRF、秘密ログ、CSV/画像制御、試験観点を記載。監査未実施 |
 
 次工程では、(1) U-01～U-20の担当と決定日を記録、(2) OpenAPI YAMLを作成して全API request/response・HTTP mapping・validationを唯一の契約化、(3) PostgreSQL DDL/migrationと台帳遅延制約・複合FK・7.4の部分一意索引をレビュー、(4) 20.1の認可/返金専用交付/再販戻し/同時件数/期限境界を含む金銭Txの統合・競合・結果不明試験を受入IDへ対応、(5) 承認済みCR-0001の前面表示/自動更新停止/独立期限/安全な新要求作成を実装・実機試験、(6) 実測・法務・セキュリティ公開gateを別証跡で完了する。参照する要件書・変更記録・基本設計・受入管理表と文書入口は承認済みmainのCR-0001反映内容に同期し、要件の新規変更や受入試験合格は追加していない。
+
+2026-10-13の参照同期：HTTPのパス・型・具体値は[OpenAPI](api/openapi.yaml)とADR-0002～0004、保存型/列/勘定はDB資料を優先する。本文の論理フローは概要であり、同じフィールドや数値の旧補完例を実行仕様として転記しない。

@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 / 基準 | 2026-10-09 / 要件v0.2、基本設計第14章 |
 | 要件・受入試験 | 下表の各operationがOpenAPIのx-requirement-ids/x-acceptance-test-idsを参照 |
-| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) |
+| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) |
 
 ## 論理APIからHTTP契約への対応
 
@@ -111,4 +111,4 @@ T02の汎用transactions POSTは、権限・本人承認を固定した各領域
 | 実装後の受入 | 金銭/認可/期限の同時実行、切断後復帰、実機/CSV/性能/削除 | FE・BE。該当AT証跡。設計用の形式チェックでは代替しない |
 | 公開判断 | G1〜G5、責任者/保存・終了体制 | 総合・運営。外部確認/契約/試験の実証。API設計だけで承認しない |
 
-DBに依存しない公開契約は担当間レビューへ進められる。資料承認・ADR採択・DB整合・実装/受入・公開ゲートは未完了。要件変更が必要な判断はCR手順へ戻す。承認者・日付・PR：未記入。
+DBに依存しない公開契約は担当間レビューへ進められる。資料承認・ADR採択・DB整合・実装/受入・公開ゲートは未完了。要件変更が必要な判断はCR手順へ戻す。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

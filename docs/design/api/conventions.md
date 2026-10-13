@@ -2,15 +2,15 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / 未割当 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 | 2026-10-09 |
 | 関連要件ID | API-01～05、MNY-01/02、WAL-01～03、TX-01～06、ROL-02/03/06、CFG-03/04、PWA-01/02 |
 | 受入試験ID | AT-021～024、026～027、034～038、042、047、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 ## 基準・HTTP
 
-[現行要件](../../requirements/event_payment_requirements.md)第22章を基準とする。型と各パスは[OpenAPI](openapi.yaml)を参照する。本文の具体化はレビュー前の設計案。[OpenAPI 3.1.0仕様](https://spec.openapis.org/oas/v3.1.0.html)に従い記述する。
+[現行要件](../../requirements/event_payment_requirements.md)第22章を基準とする。型と各パスは[OpenAPI](openapi.yaml)を参照する。本文の具体化はPR #8で採択済みの設計契約。[OpenAPI 3.1.0仕様](https://spec.openapis.org/oas/v3.1.0.html)に従い記述する。
 
 HTTPS、UTF-8 JSON、`/v1`を使用する。業務フィールドは既存詳細設計のJSON案に合わせsnake_case、operationIdはcamelCase。未知の入力フィールド/クエリを422で拒否する。外部OAuth callbackの未知拡張queryだけは制限内で無視し、state/code/errorと同名重複を検証する。成功はGET/版付き更新/解除200、作成201、非同期受付202を基本とする。認証callbackは302。各操作のOpenAPI応答を優先し、削除/解除でも現在状態を返す案とした。詳細設計の一般的なPOST201/削除204からの具体化はADR-0003に記録する。
 
@@ -95,4 +95,4 @@ codeは将来追加を許す文字列だが、実装は上表と各operationの�
 
 ## 検証・承認
 
-全論理API ID/全operationと参照の静的確認は[検証手順](validation/README.md)を参照。AT-023/024の金額形式・30桁・安全整数超過、AT-026/027/037/038の同キー復帰、AT-021/058の停止・親子所属、ROL-06の権限解除を優先確認する。アプリ・DBでの試験は未実施。承認者・日付・PR：未記入。
+全論理API ID/全operationと参照の静的確認は[検証手順](validation/README.md)を参照。AT-023/024の金額形式・30桁・安全整数超過、AT-026/027/037/038の同キー復帰、AT-021/058の停止・親子所属、ROL-06の権限解除を優先確認する。アプリ・DBでの試験は未実施。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / API：natuki53、DB：チームメンバー（未確認） / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 | 2026-10-09 |
 | 要件 / 受入試験 | API-01～05、DAT-01～03、LED-01～06、WAL-01～03、TX-01～06、INV-01～05、REF-01～04、EXP-01～03、ROL-03/06 / AT-010、021～024、026～028、035～038、042～058 |
-| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)、[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
+| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)、[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 API担当はHTTP入力/応答/権限/エラー/再送を定義し、DB担当は[DB・台帳設計](../database/README.md)で物理型・制約・索引・マイグレーションを具体化する。HTTP DTOをテーブルの直接公開にしない。以下はAPIが必要とする論理条件であり、DDLやDB内部の名称を指定するものではない。
 
@@ -71,4 +71,6 @@ OpenAPIの型・enum・自然一意と物理モデルを合わせ、GLOBAL結果
 
 実装後は、同口座二重決済、Q02/O01の異経路同時確定、grant解除との競合、予約解放/確定、コミット直後切断、返金累計/二重在庫戻し、現金未成立の返却、失効の再実行を実DBで確認する。API・DB・FEの各担当が決定を自身の正本へ反映し、PR/ADRへ承認を記録する。
 
-承認者・日付・PR：未記入。DDL変更・実DB試験：未実施。
+承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。DDL変更・実DB試験：未実施。
+
+2026-10-13、PR #8 / #9の設計を承認・マージ済み。保存先は[DB対応表](../database/api-mapping.md)、実装時の未実証項目は[開発計画](../../project/development-plan.md)を参照する。

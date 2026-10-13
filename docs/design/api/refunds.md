@@ -2,11 +2,11 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / 未割当（FE・BE・DB担当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 | 2026-10-09 |
 | 関連要件ID | CSH-01～06、REF-01～04、EXP-03、WAL-02、TX-01～06、ROL-03/06、SEC-01、API-01～04 |
 | 受入試験ID | AT-021、034～038、041～047、058～059、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)（提案） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)（採択済み） |
 
 ## 目的・範囲
 
@@ -61,4 +61,4 @@ REQUESTED/INVESTIGATINGは返金未完了。SUCCEEDEDはCOMMIT済みの返金取
 
 静的スキーマ検証は[検証手順](validation/README.md)で再実行できる。AT-042～047の残高拘束、二重交付、担当引継ぎ、期限越え、並行部分返金、失効後返金・未交付取消を、DB実装後の競合/通信断試験へ対応させる。
 
-Cookie/CSRF・調査解決・再販戻し・用途別QRのAPI案は追加済み。認証基盤統合、返金語彙と物理DDLの対応、実画面/受入試験と担当間レビューは未完了。今回の型案をDB担当の既成仕様として扱わない。承認者・日付・PR：未記入。
+Cookie/CSRF・調査解決・再販戻し・用途別QRのAPI案は追加済み。返金語彙と保存先はPR #9で対応を採択。認証基盤統合・実画面/受入試験はIssue #13/14へ引き継ぐ。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

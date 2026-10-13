@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 提案 / natuki53 / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 採択済み / natuki53 / marron46（PR #8） |
 | 日付 | 2026-10-09 |
 | 関連要件 / 受入試験 | ACC-01～06、SEC-01～03/07/10、TX-01～06、INV-01～04、ORD-01～05、EXP-01～03 / AT-001～007、025～040、048～053、059 |
-| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) |
+| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) |
 
 ## 背景
 
@@ -45,4 +45,6 @@ FEはauth/context、未完了ログインchallenge、明示再発行、元キー
 
 Better Authは[Cookie名/属性のカスタマイズ](https://better-auth.com/docs/concepts/cookies)を提供する。[2FAの公式資料](https://better-auth.com/docs/plugins/2fa)はpasswordless登録の明示設定と、OAuthログインが既定ではcredentialログインと同じ2FA制限を受けないことを説明している。このため業務側のMFA検証を必須にする。Googleの[OpenID Connect資料](https://developers.google.com/identity/openid-connect/openid-connect)に従いsubを識別子に用い、署名/iss/aud/exp/nonce等を検証する。これらは2026-10-09確認で、具体版を固定した統合試験は未実施。
 
-承認者・日付・PR：未記入。
+承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
+
+未実証の認証・worker・運用事項は[開発計画](../project/development-plan.md)のIssue #13/14へ引き継ぐ。担当者のFE/BE役割をGitHub承認だけから推定しない。

@@ -1,13 +1,13 @@
 # DB・台帳設計のレビュー確認票
 
-状態：承認待ちのレビュー案。作業者：natuki53。レビュー依頼先：fespay-team/developers。更新日：2026-10-09。
+状態：設計資料の承認・マージ済み。作業者：natuki53。レビュー依頼先：fespay-team/developers。更新日：2026-10-13。
 関連：[Issue #10](https://github.com/fespay-team/fespay/issues/10)、[DB PR #9](https://github.com/fespay-team/fespay/pull/9)、[API PR #8](https://github.com/fespay-team/fespay/pull/8)。
 
 ## 今回の承認対象
 
-承認済み要件v0.2 / CR-0001を基準に、API参照版 `52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32`（v0.4、171操作）へ対応する55表の保存モデルと制約、台帳・排他方針をレビューする。設計用SQLはその不変条件を検証する資料として扱う。
+承認済み要件v0.2 / CR-0001を基準に、API参照版 `120efcdc652d687534d2ced955625d6ac39147ee`（v0.4、171操作）へ対応する55表の保存モデルと制約、台帳・排他方針をレビューする。設計用SQLはその不変条件を検証する資料として扱う。
 
-API PR #8はDraftであり、この承認だけでAPI契約全体を採択しない。参照版が変わる場合は対応表・検証を同じ変更で更新する。運用migrationへの昇格は認証基盤・handler・復旧手順の統合検証後に行う。
+API PR #8も2026-10-13に承認・マージ済み。API契約と保存モデルをそれぞれのPRで採択した。参照版が変わる場合は対応表・検証を同じ変更で更新する。運用migrationへの昇格は認証基盤・handler・復旧手順の統合検証後に行う。
 
 ## 読む順序と確認事項
 
@@ -42,3 +42,5 @@ API PR #8はDraftであり、この承認だけでAPI契約全体を採択しな
 2026-10-09の確認では、PR #9はmainと競合せず、未解決レビュースレッドは0件。developersチームにレビュー依頼済み。mainは作者以外の承認1件と最終push者以外の承認を要求し、追加pushで古い承認を取り消す設定。台帳・金銭処理を含むため、[開発ガイド](../../../CONTRIBUTING.md)に従いバックエンド担当がレビューする。
 
 この文書のチェックを付けるだけでGitHubの承認にはならない。承認者・日時・対象headはGitHubのレビュー記録で確定する。CI workflowと必須status checkは未導入で、今回の確認は記録したローカル検証による。設定やheadが変わった場合は承認前に再確認する。
+
+2026-10-13の最終記録：API #8はmarron46が52ef2d4を承認、DB #9はmarron46・popoten0630-devが8fe36ccを承認。双方Squash merge済み（API 120efcd、DB 9d54a2b）。上表は確認観点として残し、個別チェック欄を作業者が代わりに承認しない。後続実装は[開発計画](../../project/development-plan.md)へ引き継ぐ。
