@@ -2,7 +2,9 @@
 
 学園祭・バザーなどのイベント内決済プラットフォーム。
 GitHub：[fespay-team/fespay](https://github.com/fespay-team/fespay)（public）。
-現在はチーム開発の準備段階です。アプリケーション、DB、実行環境はまだ実装していません。
+API/DB設計はPR #8/#9で採択済み。現在は開発基盤の準備段階で、業務機能の実装受入は未実施です。
+
+起動・検証は[ローカル開発手順](docs/operations/development.md)、担当と後続Issueは[開発計画](docs/project/development-plan.md)を参照してください。
 
 ## 最初に読むもの
 

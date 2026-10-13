@@ -1,0 +1,19 @@
+name: fespay-development
+services:
+  db:
+    image: postgres@sha256:0780ef0827baebe99b75a7feb7d97110d6ec1e4df3e5c4ec5b9a5143ef90ac3a
+    environment:
+      POSTGRES_USER: fespay_owner
+      POSTGRES_DB: fespay_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run setup:dev first}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U fespay_owner -d fespay_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+volumes:
+  db-data:

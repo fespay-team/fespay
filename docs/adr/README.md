@@ -10,5 +10,4 @@
 | [0002](0002-refund-api-workflows.md) | 現金払戻しの本人承認と購入返金申出の永続化を分離 | 設計採択済み（2026-10-13、PR #8） |
 | [0003](0003-api-authentication-and-command-boundaries.md) | 認証入口、短命秘密と業務MFA、決済共通化、キーscopeの具体化 | 設計採択済み（2026-10-13、PR #8） |
 | [0004](0004-api-client-recovery-and-wire-contracts.md) | DBに依存しないHTTP入力・互換性・画面復帰・CSV契約 | 設計採択済み（2026-10-13、PR #8/#9） |
-
 | [0005](0005-development-foundation.md) | ローカル開発・固定認証基盤・開発migration・CI | 実装準備案、Issue #11 |
