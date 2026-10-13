@@ -1,0 +1,13 @@
+extends:
+  - recommended
+
+plugins:
+  - ./docs/design/api/validation/fespay-plugin.cjs
+
+rules:
+  info-license: error
+  info-license-strict: error
+  no-unused-components: error
+  # 全操作の成功応答を下のルールで検証する。Google callbackのGETだけは302を要求。
+  operation-2xx-response: off
+  fespay/operation-success-response: error

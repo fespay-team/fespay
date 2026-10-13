@@ -42,4 +42,4 @@ fespay/
 - [基本設計書](docs/design/basic-design.md)はレビュー中。[詳細設計書](docs/design/detailed-design.md)はレビュー指摘修正案・再レビュー待ち。70件の受入試験の管理表を準備済み。
 - 設計・実装・受入試験は未完了。試験管理表の初期状態はすべて「未実施」。
 - GitHub Organization とリモートリポジトリの設定状況は[設定記録](docs/team/github-setup.md)を参照。
-- OSSライセンスは未選定。公開・再配布の条件はチームで決定します。
+- 当面の公開方針は[権利留保（All rights reserved）](LICENSE)。OSSライセンスは採用せず、再利用・再配布の包括的な許諾は付与しません。将来のOSSライセンス採用はチームで決定します。
