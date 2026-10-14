@@ -15,8 +15,8 @@
     "dev": "node scripts/dev.mjs",
     "typecheck": "npm run typecheck --workspaces",
     "build": "npm run build --workspaces",
-    "test": "tsx --test apps/api/test/unit.test.ts",
-    "test:integration": "tsx --test --test-concurrency=1 apps/api/test/integration.test.ts",
+    "test": "tsx --test apps/api/test/unit.test.ts apps/api/test/http-input.test.ts",
+    "test:integration": "tsx --test --test-concurrency=1 apps/api/test/integration.test.ts apps/api/test/session-api.test.ts",
     "check:design": "node scripts/check-design.mjs",
     "db:migrate:dev": "node --env-file-if-exists=.env --import tsx database/migrate.ts --development",
     "db:status:dev": "node --env-file-if-exists=.env --import tsx database/migrate.ts --development --status"
