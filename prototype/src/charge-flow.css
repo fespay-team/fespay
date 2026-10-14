@@ -366,6 +366,12 @@
   box-shadow: 0 0 0 3px #2888ee28;
 }
 
+.charge-flow__amount-input-wrap.is-error,
+.charge-flow__amount-input-wrap.is-error:focus-within {
+  border-color: #c93643;
+  box-shadow: 0 0 0 3px #c9364326;
+}
+
 .charge-flow__amount-input-wrap > span:first-child {
   font:
     800 27px Arial,
@@ -401,6 +407,11 @@
   margin: 7px 2px 16px;
   color: #8396af;
   font-size: 11px;
+}
+
+.charge-flow__input-help.is-error {
+  color: #b42332;
+  font-weight: 700;
 }
 
 .charge-flow__amount-presets {

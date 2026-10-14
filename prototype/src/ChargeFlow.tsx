@@ -47,7 +47,19 @@ const stageNumber: Record<Stage, number> = {
   receipt: 6,
 };
 
+const MAX_CHARGE_DIGITS = 9;
 const yen = (value: number) => `¥${value.toLocaleString("ja-JP")}`;
+
+function getAmountError(value: string): string | null {
+  if (value === "") return null;
+  if (value.includes("-")) return "マイナスの金額は入力できません。";
+  if (value.includes(".")) return "小数は入力できません。1円単位で入力してください。";
+  if (!/^\d+$/.test(value)) return "半角数字のみで入力してください。";
+  if (value.length > MAX_CHARGE_DIGITS)
+    return `金額は${MAX_CHARGE_DIGITS}桁以内で入力してください。`;
+  if (Number(value) === 0) return "1円以上の金額を入力してください。";
+  return null;
+}
 
 function createDemoId() {
   const unique =
@@ -164,8 +176,9 @@ export default function ChargeFlow({
       ? "01:00"
       : `00:${String(secondsRemaining).padStart(2, "0")}`;
   const qrValue = `FESPAY-DEMO-CHARGE-RECEPTION:${qrSession.current}:${qrSlot}`;
-  const amount = Number(amountText);
-  const validAmount = /^\d{1,9}$/.test(amountText) && amount > 0;
+  const amountError = getAmountError(amountText);
+  const validAmount = amountText !== "" && amountError === null;
+  const amount = validAmount ? Number(amountText) : 0;
 
   const goBack = () => {
     if (stage === "identity") setStage("qr");
@@ -387,7 +400,9 @@ export default function ChargeFlow({
               >
                 チャージする金額
               </label>
-              <div className="charge-flow__amount-input-wrap">
+              <div
+                className={`charge-flow__amount-input-wrap${amountError ? " is-error" : ""}`}
+              >
                 <span aria-hidden="true">¥</span>
                 <input
                   id="charge-flow-amount"
@@ -396,21 +411,19 @@ export default function ChargeFlow({
                   pattern="[0-9]*"
                   autoComplete="off"
                   value={amountText}
-                  onChange={(event) =>
-                    setAmountText(
-                      event.target.value.replace(/\D/g, "").slice(0, 9),
-                    )
-                  }
+                  onChange={(event) => setAmountText(event.target.value)}
                   placeholder="0"
+                  aria-invalid={amountError !== null}
                   aria-describedby="charge-flow-amount-help"
                 />
                 <span aria-hidden="true">円</span>
               </div>
               <p
                 id="charge-flow-amount-help"
-                className="charge-flow__input-help"
+                className={`charge-flow__input-help${amountError ? " is-error" : ""}`}
+                aria-live="polite"
               >
-                1円以上、9桁以内の整数を入力してください。
+                {amountError ?? `1円以上、${MAX_CHARGE_DIGITS}桁以内の整数を入力してください。`}
               </p>
               <div
                 className="charge-flow__amount-presets"
