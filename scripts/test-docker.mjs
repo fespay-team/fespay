@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import https from 'node:https';
 
 const exec = promisify(execFile);
+const setupUser = `${process.getuid()}:${process.getgid()}`;
 const root = fileURLToPath(new URL('../', import.meta.url));
 await mkdir(resolve(root, '.tmp'), { recursive: true });
 const tmp = await mkdtemp(resolve(root, '.tmp/docker-smoke-'));
@@ -78,6 +79,8 @@ try {
     await run([
       'run',
       '--rm',
+      '--user',
+      setupUser,
       '-v',
       tmp + ':/workspace',
       'fespay-setup:local',
@@ -94,6 +97,8 @@ try {
       run([
         'run',
         '--rm',
+        '--user',
+        setupUser,
         '-v',
         tmp + ':/workspace',
         'fespay-setup:local',
