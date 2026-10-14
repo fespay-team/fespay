@@ -29,3 +29,6 @@ test-results/
 # Temporary local artifacts
 .tmp/
 .cache/
+.venv/
+__pycache__/
+*.pyc

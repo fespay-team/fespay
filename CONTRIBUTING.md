@@ -42,6 +42,5 @@ API契約の変更は利用するFEと提供するBEが影響を確認します�
 - 実装変更時は必要なテストを実施し、未実施の項目・理由を明記する。
 - 秘密情報、実利用者の個人情報、本番データを含めていない。
 
-現在は文書のみで、CI・アプリ用のテストコマンドは未導入です。
-ローカルでコミット前に `git diff --cached --check` で余分な空白を確認できます。
-自動テスト・依存関係検査・秘密情報検査は実装基盤を作る際に導入します。
+開発基盤の検証は[開発手順](docs/operations/development.md)の型/build/基本試験、設計検証、隔離DB試験を実行します。GitHub Actionsは同じlockfileでLinux/macOS/WindowsのworkspaceとLinuxのDB/認証を確認します。
+コミット前に `git diff --cached --check` を実行します。業務受入・性能・復旧・公開gateは別の証跡で確認し、基盤CIの合格へ混ぜません。

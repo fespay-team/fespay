@@ -1,6 +1,6 @@
 # 物理スキーマ案
 
-状態：レビュー案。PostgreSQL 16以上。API参照：PR #8、`52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32`（v0.4）。
+状態：設計採択済み（2026-10-13、PR #9）。PostgreSQL 16以上。API参照：PR #8、`120efcdc652d687534d2ced955625d6ac39147ee`（v0.4）。
 
 列・CHECK・FK・一意制約の正本候補は[検証用SQL](sql/initial-schema-draft.sql)。この本文はその列一覧とAPIへの意味付けであり、運用migrationではない。全IDは内部/公開UUID案、生成方式はBEで固定する。金額domainはscaleなしnumericに整数・有限・30桁のCHECKを加え、入力段階の丸めを防ぐ。更新表のversionは正のbigint、全表created_at、更新表updated_atを持つ。FKはRESTRICT、event関連は複合所属を保証する。
 

@@ -1,9 +1,9 @@
 # ADR-0002：払戻しの本人承認と購入返金申出の永続化を分ける
 
-- 状態：提案（FE・BE・DB担当のレビュー前）
+- 状態：採択済み（設計契約。実装受入は別工程）
 - 日付：2026-10-09
-- 提案者 / 決定者：natuki53 / 未決
-- 関連要件 / Issue / PR：CSH-01～06、REF-01～04、TX-03～05、API-03/04 / [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8)
+- 提案者 / 決定者：natuki53 / PR #8の承認・マージ記録
+- 関連要件 / Issue / PR：CSH-01～06、REF-01～04、TX-03～05、API-03/04 / [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8)
 - 置き換えるADR：該当なし
 
 ## 背景・制約
@@ -17,7 +17,7 @@
 | 単一の多用途POST | 呼出し数は少ないが、受付権限/本人承認と準備/金銭成立の分岐が混在する。返金Tx失敗時の申出保持には別の永続化契約が必要 |
 | 準備/申出と確定を分離（本提案） | 主体・効果・再開点をoperation単位で定義できる。申出保存だけ成功した中間状態と、操作別のキー/版管理が必要 |
 
-## 提案と理由
+## 採択方針と理由
 
 H01は受付によるPREPARED作成と本人によるHELD承認に分け、H02/H03/H04は現金交付開始・完了/取消/調査・引継ぎを提供する。返金専用額も同じ処理で元区分を保持する。
 
@@ -33,4 +33,6 @@ FEは本人承認の導線と中間状態の表示、操作別キー/IDの保存
 
 ## 承認記録
 
-承認者・日付・PR：未記入。
+承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
+
+未実証の認証・worker・運用事項は[開発計画](../project/development-plan.md)のIssue #13/14へ引き継ぐ。担当者のFE/BE役割をGitHub承認だけから推定しない。

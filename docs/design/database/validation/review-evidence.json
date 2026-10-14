@@ -1,22 +1,22 @@
 {
   "scope": "DB設計用SQL・検証器とAPI対応のローカル検証。実handler/運用DB/実装受入は対象外。",
-  "recorded_at_utc": "2026-10-09T12:18:49+00:00",
-  "validated_source_commit": "7c2ab97e8d0028382363739cce29b69d6448f25f",
+  "recorded_at_utc": "2026-10-13T09:16:11+00:00",
+  "validated_source_commit": "df938f31ee6d071907ad5bef37860668d3c7a276",
   "validated_files_sha256": {
     "docs/design/database/sql/initial-schema-draft.sql": "186b41dc8781322e08d0a3406bddb23f9f64a9b16389ce5f6f7216c2e865e321",
     "docs/design/database/validation/verify_schema.py": "2f7340e867d71810c885224b61abee6cb7e61ad8e832bf7ac7ccb6d7c437a651",
     "docs/design/database/validation/check_contract.py": "6d95da0103f807aaded0c7691755690190b575be749f5929315d036ff28479ac",
-    "docs/design/database/validation/api-reference.json": "02ce50d73d496403c892c17fc23bcaef3baa0139865a704c4ac4fb66971b7e47",
+    "docs/design/database/validation/api-reference.json": "464062507f677ef68b6bb96001cb569a2507f5c61e0bbbfa046f80edcb12c7ec",
     "docs/design/database/validation/table-inventory.json": "0bbc7da86a86ee02879153c1b589f1d5301a7ccc318fbf4cb84108d8da44d874",
     "docs/design/database/validation/requirements.txt": "0969da99a0bc2a1b71ed50584560f4588a37567ac63af3ddbaf3c4617ca5621a",
-    "docs/design/database/api-mapping.md": "44fbd84db7b75f0e4d324dc5b7c19d962e6f6836a4827aea6ce7e462ead39f74",
-    "docs/design/database/physical-schema.md": "b1ff3cec221bd1ac3f44e7f10318a468eeb3d54924f2874ad76fe25d085ba1f7",
-    "docs/design/database/er-diagram.md": "1b7f7d211b88b4cdd8e2d95413ff9b4e4b0712cb7c256deeeff55bd0a2cd8627",
-    "docs/design/database/design.md": "f4783392edc3aea78657f2998ccd1ee7f116019ffbe7dfd1dcd66631a3a409b7",
-    "docs/design/database/ledger.md": "f2a096a648de72b75a58d29677f9e233a529d0d5ae27c7a6ada04ee966982fe3"
+    "docs/design/database/api-mapping.md": "65f28765ce13e118ab3b6177fbb265b726fe30714b843bf8c8e7b8e26cf0496b",
+    "docs/design/database/physical-schema.md": "80c3d4d8807e3114ba9c85a9de1d001d916a0e9145027d8af82dc59625268544",
+    "docs/design/database/er-diagram.md": "5bd7795149f6d34b3273391b6895ebdd4fac1a125e4da76c5dbb2db11fb8131a",
+    "docs/design/database/design.md": "ceef2e54875089ca96d342b0d9ce585c25776757863fe06484e61ccdee807d53",
+    "docs/design/database/ledger.md": "8f2fc3ba245f77e733c21f73872afefc233313bcae4ef815a168a53a7e63f8dc"
   },
   "api_reference": {
-    "commit": "52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32",
+    "commit": "120efcdc652d687534d2ced955625d6ac39147ee",
     "version": "0.4.0-draft",
     "operation_count": 171,
     "openapi_sha256": "059bf1834872c0f13fdbad19e755ed41b206bd6d479f5462a7b5f403a62536b3"
@@ -32,8 +32,6 @@
   },
   "static_contract": {
     "pinned_api_passed": true,
-    "origin_api_design_commit": "52ef2d497dc5ccc243f900b2f5c3fb9c2bfcaa32",
-    "origin_api_design_passed": true,
     "operation_count": 171,
     "table_count": 55,
     "checks": [
@@ -42,7 +40,8 @@
       "所有表・列のenum",
       "追加保存先・列",
       "相対リンク"
-    ]
+    ],
+    "merged_api_commit": "120efcdc652d687534d2ced955625d6ac39147ee"
   },
   "mermaid": {
     "parser_version": "12.1.0",

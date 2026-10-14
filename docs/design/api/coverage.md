@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 / 基準 | 2026-10-09 / 要件v0.2、基本設計第14章 |
 | 要件・受入試験 | 下表の各operationがOpenAPIのx-requirement-ids/x-acceptance-test-idsを参照 |
-| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) |
+| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) |
 
 ## 論理APIからHTTP契約への対応
 
@@ -97,18 +97,18 @@ T02の汎用transactions POSTは、権限・本人承認を固定した各領域
 | 集計・CSVの表示契約 | 売上の発生時/原決済期間再集計、店舗/商品数量/注文経路の行、列版/順序、生成開始/完了時刻、空結果/分割/partページング/配信は[CSV契約](csv-contract.md) |
 | 形式/意味の設計検証 | schema状態ケース、HTTP入力/互換性/期間帰属/CSV参照手順、故意に壊したlint仕様を[保存して再実行](validation/README.md) |
 
-これらはAPI側の設計案を具体化した状態。未採択の値・追加判断はADR-0003/0004へ記録し、実アプリで成立した動作としては扱わない。
+これらの設計契約とADR-0003/0004はPR #8で採択済み。実アプリで成立した動作としては扱わない。
 
-## 確定前に残るレビュー・実証
+## 採択後に残る実装・実証
 
 | 区分 | 項目 | 担当と完了証拠 |
 | --- | --- | --- |
-| FE/BEの契約レビュー | 戻り先ルート、Googleログインchallenge方針、旧画面のRECOVERY、集計/CSV表示、具体値 | FE・BE。ADR-0002/0003/0004採択と正本反映。期限/JSON/画像/再接続値の合意 |
+| FE/BEの実装確認 | 採択済みの戻り先/RECOVERY/CSV/入力値を画面へ適用。Google challengeの製品画面方針は実装担当が具体化 | Issue #12で担当を割り当て、#13/#14で実画面と統合証跡を確認 |
 | 認証基盤・環境統合 | Cookie/CSRF/OAuth/GoogleのみTOTP、メール・画像/資源保護、カーソル鍵 | BE・環境。固定Better Auth版/SDK/adapter統合、異常画像/配送/実ブラウザー試験 |
-| DBとの共同調整 | DTO enum/公開ID/版、GLOBALキー、自然一意/ロック、紛争保全/現金scope | API・DB。物理モデル対応表・制約/競合試験。DDLはDB担当が作成 |
+| DBの実装確認 | PR #9でDTO/保存先・enum/自然一意・所属/制約を採択済み。実handlerのロック/現在認可/復帰を確認 | Issue #14。設計制約104件を実handlerのATへ読み替えない |
 | DBとの共同調整 | CSV/集計snapshot保持とcutoff、SSE配信位置/保持/順序 | BE・DB。同一job/ページの時点保持、欠落/権限解除/同時更新の実証、方式/実値の記録 |
 | 運営・実装の調整 | 自動失効workerの承認/起動認証、因子喪失時サポート | BE・運営。特権MFA/事前設定を満たす手順と重複実行/保全試験 |
 | 実装後の受入 | 金銭/認可/期限の同時実行、切断後復帰、実機/CSV/性能/削除 | FE・BE。該当AT証跡。設計用の形式チェックでは代替しない |
 | 公開判断 | G1〜G5、責任者/保存・終了体制 | 総合・運営。外部確認/契約/試験の実証。API設計だけで承認しない |
 
-DBに依存しない公開契約は担当間レビューへ進められる。資料承認・ADR採択・DB整合・実装/受入・公開ゲートは未完了。要件変更が必要な判断はCR手順へ戻す。承認者・日付・PR：未記入。
+資料承認・ADR採択・DB保存モデルとの設計整合はPR #8/#9で完了。実装/受入・公開ゲートはIssue #12～14で管理する。要件変更が必要な判断はCR手順へ戻す。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

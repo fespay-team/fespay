@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / 未割当 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 | 2026-10-09 |
 | 関連要件ID / 受入試験ID | TX-04/05、NET-02/04、ROL-03/06、PWA-01/02 / AT-021、036～038、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 ## 接続・通知
 
@@ -38,4 +38,4 @@ heartbeatは20秒のコメント行という詳細設計の補完案を維持す
 
 Outbox UUIDと配信再開位置の対応、コミット/配送が前後した場合に未配送行を飛ばさない走査方法、保持期間、複数worker間の順序、停止/認可変更の通知方式は未決。再開位置の安全性を保証できない場合はresyncへ倒す。Outbox時刻やUUIDの大小だけで欠落なしと判断しない。
 
-AT-036/037でコミット直後の切断・重複・遅延を注入し、通知なしでも正本結果へ復帰できること、AT-058/ROL-06で他event/権限解除後の再配信がないことを検証する。2秒/5秒の画面反映目標は未測定。承認者・日付・PR：未記入。
+AT-036/037でコミット直後の切断・重複・遅延を注入し、通知なしでも正本結果へ復帰できること、AT-058/ROL-06で他event/権限解除後の再配信がないことを検証する。2秒/5秒の画面反映目標は未測定。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

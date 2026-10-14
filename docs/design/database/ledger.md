@@ -1,6 +1,6 @@
 # 台帳・残高・排他
 
-状態：DBレビュー案。根拠：LED-01～06、WAL-01～03、TX-01～06、CSH-01～07、REF-03/04、DAT-01、AT-021～024/026～048/055/058。[設計方針](design.md)と[SQL](sql/initial-schema-draft.sql)を併読する。
+状態：設計採択済み（2026-10-13、PR #9）。根拠：LED-01～06、WAL-01～03、TX-01～06、CSH-01～07、REF-03/04、DAT-01、AT-021～024/026～048/055/058。[設計方針](design.md)と[SQL](sql/initial-schema-draft.sql)を併読する。
 
 ## 勘定と残高再構築
 

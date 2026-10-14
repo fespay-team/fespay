@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー | 提案 / natuki53 / FE・BE未割当、DB接点は別調整 |
+| 状態 / 担当 / レビュー | 採択済み / natuki53 / marron46（PR #8）、DBはPR #9で対応 |
 | 日付 | 2026-10-09 |
 | 要件 / 受入 | API-01～05、ACC-01～05、NET-02/04、PWA-01/02、RPT-01～05、SEC-07～10 / AT-001～007、036～038、055～062 |
-| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) |
+| Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) |
 
 ## 背景・提案
 
@@ -23,10 +23,12 @@ JSON256KiB/depth32/10,000ノード、multipart5,100,000bytes、画像8,192px/33,
 
 全更新を旧版で拒否すると現金完了を止める。全更新を許可すると必須改訂を案内できないため、READ/RECOVERY/CURRENTを操作別にし現在認可/MFA/状態を共通に維持する。公開値は環境/物理モデルに依存せずレビューできるが、性能達成を宣言しない。
 
-FE/BE採択・実装試験、Better Auth固定版、デコーダ資源実測と環境設定は残る。物理型/enum/キー/ロック、Outbox再開位置/保持、snapshot/cutoffはDB成果物と後で合わせる。要件/DDL/受入管理表を変更しない。
+設計はPR #8、保存モデル/型/enum/キーはPR #9で採択済み。実装試験・認証統合・デコーダ資源実測と環境設定は残る。実handlerロック、Outbox保持/再開、snapshot/cutoffをIssue #13/#14で実証する。要件/DDL/受入管理表を変更しない。
 
 ## 成果物・検証
 
 [OpenAPI](../design/api/openapi.yaml)、[HTTP契約](../design/api/http-contract.md)、[画面復帰](../design/api/client-flows.md)、[CSV契約](../design/api/csv-contract.md)。[設計用検証](../design/api/validation/README.md)を実サービスの認可/金銭/排他/認証/性能試験と区別する。
 
-承認者・日付・PR：未記入。
+承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
+
+未実証の認証・worker・運用事項は[開発計画](../project/development-plan.md)のIssue #13/14へ引き継ぐ。担当者のFE/BE役割をGitHub承認だけから推定しない。

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "0001-business",
+    "file": "docs/design/database/sql/initial-schema-draft.sql",
+    "sha256": "186b41dc8781322e08d0a3406bddb23f9f64a9b16389ce5f6f7216c2e865e321"
+  },
+  {
+    "id": "0002-auth",
+    "file": "database/migrations/0002-auth.sql",
+    "sha256": "eeea187f5ea8f93e05e702e15f1bf23ca01188396b94dd657669a3b724209a36"
+  }
+]

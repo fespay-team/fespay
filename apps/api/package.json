@@ -1,0 +1,17 @@
+{
+  "name": "@fespay/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "better-auth": "1.7.7",
+    "hono": "4.13.13",
+    "kysely": "0.29.6",
+    "pg": "8.23.1"
+  }
+}

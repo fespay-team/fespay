@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 / API ID | 2026-10-09 / P01～P05、O01～O05、R01～R05 |
 | 要件 / 受入試験 | PRD-01/02、INV-01～05、ORD-01～06、REF-01～04、RPT-01～05、SEC-09、DAT-01～03 / AT-045～047、049～058、061、069 |
-| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
+| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 型は[OpenAPI](openapi.yaml)、金銭確定との接点は[決済・現金設計](payments-and-cash.md)を参照する。
 

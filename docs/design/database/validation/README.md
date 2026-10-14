@@ -1,6 +1,6 @@
 # DB設計案の検証
 
-状態：設計用。2026-10-09にPostgreSQL 16.12で104ケース（通常アプリ権限・2接続競合を含む）を実施し、全件合格。運用DBには適用しない。
+状態：設計用。2026-10-13にPostgreSQL 16.12で104ケース（通常アプリ権限・2接続競合を含む）を実施し、全件合格。運用DBには適用しない。
 
 [レビュー用証跡](review-evidence.json)に、SQL・検証器・API対応のcommitとファイルのSHA-256、API参照版、PostgreSQL image digest、実行結果と104ケースを保存する。[レビュー確認票](../review.md)から承認対象と実装時の残件を確認できる。証跡の対象SQLや検証器を変更した場合は再実行し、証跡も更新する。
 
@@ -29,9 +29,9 @@ print('証跡の対象ファイルと一致')
 PY
 ```
 
-一致は対象版の確認であり試験の再実行ではない。README・レビュー確認票・証跡自身は対象commit後の説明資料として追加し、ハッシュ対象には含めない。
+一致は対象版の確認であり試験の再実行ではない。README・レビュー確認票・証跡自身は説明資料として管理し、ハッシュ対象には含めない。
 
-check_contract.pyはapi-reference.jsonのGit commitからOpenAPIを読み、全171 operationの対応、各対応表/列のCHECKにあるenum語彙、SQL/物理本文/ERの55表一致、レビューで抜けていた列、公開連絡先/払戻し訂正の保存先、相対リンクを検査する。API版更新の確認には `--api-ref origin/api-design` を指定する。参照名は先にcommitへ解決し、その版を照合する。表名/語彙一致をBE実装の完成証明にしない。
+check_contract.pyはapi-reference.jsonのGit commitからOpenAPIを読み、全171 operationの対応、各対応表/列のCHECKにあるenum語彙、SQL/物理本文/ERの55表一致、レビューで抜けていた列、公開連絡先/払戻し訂正の保存先、相対リンクを検査する。API版更新の確認には更新候補のGit refを指定する（例：`--api-ref origin/main`）。マージ後に自動削除されたapi-designブランチには依存しない。参照名は先にcommitへ解決し、その版を照合する。表名/語彙一致をBE実装の完成証明にしない。
 
 追加確認では、訂正の所有列からNOT_REQUIREDだけを除去したSQL/物理本文と、confirmContactEmailの保存先から専用表を除去した対応表を一時コピーで与え、2件とも静的検証が拒否することを確認した。別の表やtriggerに同じ語彙があるだけでは列のenum一致を合格にしない。
 

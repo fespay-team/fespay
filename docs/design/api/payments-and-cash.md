@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 下書き / natuki53 / FE・BE・DB担当（未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
 | 更新日 / API ID | 2026-10-09 / Q01～Q04、T02～T05、C01～C05、F01～F03、E05の失効実行 |
 | 要件 / 受入試験 | CHG-01～06、PAY-A01/02、PAY-B01～06、PAY-C01/02、TX-01～06、TRF-01～06、CSH-01～07、EXP-01～03、LED-01～06 / AT-021～048、055、069 |
-| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（提案） |
+| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 要求・応答の型は[OpenAPI](openapi.yaml)、共通の再送とエラーは[共通規約](conventions.md)、現金払戻し/購入返金は[返金契約](refunds.md)を参照する。
 
