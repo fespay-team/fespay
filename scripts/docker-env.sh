@@ -16,6 +16,12 @@ if [[ "$action" == setup || ( "$action" == up && ! -f "$env_file" ) ]]; then
 fi
 if [[ "$mode" == local ]]; then override=compose.local.yaml; else override=compose.tunnel.yaml; fi
 compose=(docker compose --env-file "$env_file" -f compose.docker.yaml -f "$override")
+services=(api web gateway)
+if [[ "$mode" == staging && -f secrets/cloudflared.yml ]]; then
+  [[ -f secrets/cloudflared.json ]] || { echo 'Dedicated tunnel credentials are missing'; exit 2; }
+  compose+=(-f compose.cloudflare.yaml)
+  services+=(tunnel)
+fi
 case "$action" in
   up)
     "${compose[@]}" build api web migrate
@@ -25,10 +31,10 @@ case "$action" in
       "${compose[@]}" exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "secrets/staging-backups/$(date -u +%Y%m%dT%H%M%SZ).sql"
     fi
     "${compose[@]}" run --rm migrate
-    "${compose[@]}" up -d --wait api web gateway
+    "${compose[@]}" up -d --wait "${services[@]}"
     ;;
   down) "${compose[@]}" down;;
-  logs) "${compose[@]}" logs --tail 100 api web gateway;;
+  logs) "${compose[@]}" logs --tail 100 "${services[@]}";;
   status) "${compose[@]}" ps;;
   certificate)
     [[ "$mode" == local ]] || { echo 'Local certificate only'; exit 2; }

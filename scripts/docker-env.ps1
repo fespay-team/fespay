@@ -19,6 +19,12 @@ if ($Action -eq 'setup' -or ($Action -eq 'up' -and !(Test-Path $envFile))) {
 }
 $override=if ($Mode -eq 'local') {'compose.local.yaml'} else {'compose.tunnel.yaml'}
 $composeArgs=@('compose','--env-file',$envFile,'-f','compose.docker.yaml','-f',$override)
+$services=@('api','web','gateway')
+if ($Mode -eq 'staging' -and (Test-Path 'secrets/cloudflared.yml')) {
+  if (!(Test-Path 'secrets/cloudflared.json')) { throw 'Dedicated tunnel credentials are missing' }
+  $composeArgs+=@('-f','compose.cloudflare.yaml')
+  $services+=@('tunnel')
+}
 switch ($Action) {
   'up' {
     Invoke-Docker ($composeArgs+@('build','api','web','migrate'))
@@ -37,10 +43,10 @@ switch ($Action) {
       if ($process.ExitCode -ne 0) { throw 'Staging backup failed; migrations were not applied' }
     }
     Invoke-Docker ($composeArgs+@('run','--rm','migrate'))
-    Invoke-Docker ($composeArgs+@('up','-d','--wait','api','web','gateway'))
+    Invoke-Docker ($composeArgs+@('up','-d','--wait')+$services)
   }
   'down' { Invoke-Docker ($composeArgs+@('down')) }
-  'logs' { Invoke-Docker ($composeArgs+@('logs','--tail','100','api','web','gateway')) }
+  'logs' { Invoke-Docker ($composeArgs+@('logs','--tail','100')+$services) }
   'status' { Invoke-Docker ($composeArgs+@('ps')) }
   'certificate' {
     if ($Mode -ne 'local') { throw 'Local certificate only' }
