@@ -12,5 +12,5 @@
 | 画面・導線 | [ui](ui/README.md) | FE-1＋FE-2 |
 | 業務状態・競合 | [flows](flows/README.md) | 各担当＋BE |
 
-APIの仕様本文は [api/openapi.yaml](api/openapi.yaml) を正本とし、説明文でリクエスト定義を重複管理しません。現在は全58論理API IDを171 HTTP操作へ具体化した全領域の設計案です。認証・イベント/権限・チャージ/決済/譲渡・払戻し/返金・商品/注文・集計/CSVを含みます。DBを待たず[HTTP入力・互換性](api/http-contract.md)、[画面復帰](api/client-flows.md)、[CSVの列・集計・配信](api/csv-contract.md)も具体化しています。[対応表とレビュー残件](api/coverage.md)を参照してください。API #8 / DB #9は2026-10-13承認・マージ済み。実装・運用の残件は[開発計画](../project/development-plan.md)で管理します。
+APIの仕様本文は [api/openapi.yaml](api/openapi.yaml) を正本とし、説明文でリクエスト定義を重複管理しません。現在は全58論理API IDを171 HTTP操作へ具体化した全領域の設計案です。認証・イベント/権限・チャージ/決済/譲渡・払戻し/返金・商品/注文・集計/CSVを含みます。DBを待たず[HTTP入力・互換性](api/common/http-contract.md)、[画面復帰](api/flows/client-flows.md)、[CSVの列・集計・配信](api/domains/csv-contract.md)も具体化しています。[対応表とレビュー残件](api/coverage.md)を参照してください。API #8 / DB #9は2026-10-13承認・マージ済み。実装・運用の残件は[開発計画](../project/development-plan.md)で管理します。
 DBの論理設計と将来のマイグレーションの対応を記録し、UI・API・DBで同じ要件IDを参照します。

@@ -2,15 +2,15 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 | 2026-10-09 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 | 2026-10-14 |
 | 関連要件ID | CSH-01～06、REF-01～04、EXP-03、WAL-02、TX-01～06、ROL-03/06、SEC-01、API-01～04 |
 | 受入試験ID | AT-021、034～038、041～047、058～059、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)（採択済み） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../../adr/0002-refund-api-workflows.md)（採択済み） |
 
 ## 目的・範囲
 
-[詳細設計](../detailed-design.md)第8・9・21.6・21.7節をHTTP契約へ具体化する。未使用残高の現金払戻しと、元の店舗決済に対する購入返金を区別する。型・パス・必須項目は[OpenAPI](openapi.yaml)が正本候補で、本書には処理の意味と競合条件を記載する。誤チャージ訂正C03・現金調査C04/照合C05は[決済・現金設計](payments-and-cash.md)、返金商品の再販戻しP02は[商品・注文設計](products-orders-reports.md)へ具体化した。
+[詳細設計](../../detailed-design.md)第8・9・21.6・21.7節をHTTP契約へ具体化する。未使用残高の現金払戻しと、元の店舗決済に対する購入返金を区別する。型・パス・必須項目は[OpenAPI](../openapi.yaml)が正本候補で、本書には処理の意味と競合条件を記載する。誤チャージ訂正C03・現金調査C04/照合C05は[決済・現金設計](payments-and-cash.md)、返金商品の再販戻しP02は[商品・注文設計](products-orders-reports.md)へ具体化した。
 
 ## 現金払戻し
 
@@ -59,6 +59,6 @@ REQUESTED/INVESTIGATINGは返金未完了。SUCCEEDEDはCOMMIT済みの返金取
 
 ## 検証・未決・承認
 
-静的スキーマ検証は[検証手順](validation/README.md)で再実行できる。AT-042～047の残高拘束、二重交付、担当引継ぎ、期限越え、並行部分返金、失効後返金・未交付取消を、DB実装後の競合/通信断試験へ対応させる。
+静的スキーマ検証は[検証手順](../validation/README.md)で再実行できる。AT-042～047の残高拘束、二重交付、担当引継ぎ、期限越え、並行部分返金、失効後返金・未交付取消を、DB実装後の競合/通信断試験へ対応させる。
 
 Cookie/CSRF・調査解決・再販戻し・用途別QRのAPI案は追加済み。返金語彙と保存先はPR #9で対応を採択。認証基盤統合・実画面/受入試験はIssue #13/14へ引き継ぐ。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。

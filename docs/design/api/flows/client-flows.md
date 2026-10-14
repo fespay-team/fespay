@@ -1,8 +1,8 @@
 # 認証・通信断・画面更新の復帰
 
-状態：API設計案、FE/BEレビュー前。担当：natuki53。更新日：2026-10-09。
+状態：設計採択済み（PR #8）。担当：natuki53。レビュー者：marron46。更新日：2026-10-14。
 要件：ACC-01～05、SEC-01～03、TX-03～05、NET-02/04、PWA-01/02。受入：AT-001～007、036～038、059/060/062。
-[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../adr/0004-api-client-recovery-and-wire-contracts.md)。
+[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../../adr/0004-api-client-recovery-and-wire-contracts.md)。
 
 ## 認証の復帰
 
@@ -33,7 +33,7 @@ SSE接続世代と対象GET世代をFE内で管理する。event/actor切替・�
 3. 後から開始したGETの値を、遅い古いGETで上書きしない。同一対象versionも確認する。
 4. 初回/再接続/resync/前面復帰では、表示中リソース・未確認一覧も取得する。
 
-resyncだけで正常値受信とせず、GET成功までchecked_atと更新中/通信不可を表示する。未知event/typeを金銭成功にせず、接続作直しと許可された正本取得へ。[events.md](events.md)の送信前/再配信時の現在認可を維持する。
+resyncだけで正常値受信とせず、GET成功までchecked_atと更新中/通信不可を表示する。未知event/typeを金銭成功にせず、接続作直しと許可された正本取得へ。[events.md](sse.md)の送信前/再配信時の現在認可を維持する。
 
 | 状態 | FE動作 |
 | --- | --- |
@@ -58,6 +58,6 @@ resyncだけで正常値受信とせず、GET成功までchecked_atと更新中/
 | CLIENT_UPDATE_REQUIRED | 新規CURRENT停止、GET/RECOVERYを継続。未確認/現金が解消してから利用者操作で更新 |
 | SUCCEEDED/最終REJECTED確認後 | 元対象IDを保持して更新し同じ正本へ。受取待ち注文とPOST送信中を混同しない |
 
-HTTPタイムアウト/SSE/更新案内は成立証明ではない。prepare/申出/job受付と最終金銭完了を区別し、[HTTP互換性](http-contract.md)の旧版許可も認可/MFA/状態を省略しない。
+HTTPタイムアウト/SSE/更新案内は成立証明ではない。prepare/申出/job受付と最終金銭完了を区別し、[HTTP互換性](../common/http-contract.md)の旧版許可も認可/MFA/状態を省略しない。
 
 根拠：[Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect)、[EventSource仕様](https://html.spec.whatwg.org/multipage/server-sent-events.html)。実ブラウザー/認証基盤試験は未実施。

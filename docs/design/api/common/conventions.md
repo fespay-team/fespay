@@ -2,25 +2,25 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 | 2026-10-09 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 | 2026-10-14 |
 | 関連要件ID | API-01～05、MNY-01/02、WAL-01～03、TX-01～06、ROL-02/03/06、CFG-03/04、PWA-01/02 |
 | 受入試験ID | AT-021～024、026～027、034～038、042、047、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 ## 基準・HTTP
 
-[現行要件](../../requirements/event_payment_requirements.md)第22章を基準とする。型と各パスは[OpenAPI](openapi.yaml)を参照する。本文の具体化はPR #8で採択済みの設計契約。[OpenAPI 3.1.0仕様](https://spec.openapis.org/oas/v3.1.0.html)に従い記述する。
+[現行要件](../../../requirements/event_payment_requirements.md)第22章を基準とする。型と各パスは[OpenAPI](../openapi.yaml)を参照する。本文の具体化はPR #8で採択済みの設計契約。[OpenAPI 3.1.0仕様](https://spec.openapis.org/oas/v3.1.0.html)に従い記述する。
 
 HTTPS、UTF-8 JSON、`/v1`を使用する。業務フィールドは既存詳細設計のJSON案に合わせsnake_case、operationIdはcamelCase。未知の入力フィールド/クエリを422で拒否する。外部OAuth callbackの未知拡張queryだけは制限内で無視し、state/code/errorと同名重複を検証する。成功はGET/版付き更新/解除200、作成201、非同期受付202を基本とする。認証callbackは302。各操作のOpenAPI応答を優先し、削除/解除でも現在状態を返す案とした。詳細設計の一般的なPOST201/削除204からの具体化はADR-0003に記録する。
 
-本文サイズ・JSON構文/深さ・multipart/画像資源・エラーコードとfield_errors・契約リビジョンの正本は[HTTP入力・互換性](http-contract.md)とOpenAPI拡張。旧画面でもREAD/RECOVERYと既成立の同キー復帰を維持し、新規CURRENTだけ更新を要求する。画面更新・通信断・認証の順序は[画面復帰](client-flows.md)。これらの具体値と手順は[ADR-0004](../../adr/0004-api-client-recovery-and-wire-contracts.md)の提案。
+本文サイズ・JSON構文/深さ・multipart/画像資源・エラーコードとfield_errors・契約リビジョンの正本は[HTTP入力・互換性](http-contract.md)とOpenAPI拡張。旧画面でもREAD/RECOVERYと既成立の同キー復帰を維持し、新規CURRENTだけ更新を要求する。画面更新・通信断・認証の順序は[画面復帰](../flows/client-flows.md)。これらの具体値と手順は[ADR-0004](../../../adr/0004-api-client-recovery-and-wire-contracts.md)で採択済み。
 
 個人・認証・残高・取引・注文の応答はエラーも含め`Cache-Control: no-store`。Service Workerはnetwork-onlyとし、古い応答で成立を否定しない。GETは金銭確定・秘密発行を行わない。期限切れ予約の正本再評価/内部解放は業務Txで直列化し、金銭成立と競合させない。公開APIも現案はno-storeとし、将来の公開キャッシュ採用時も掲載解除の最大60秒を守る。
 
 ## 認証・認可
 
-[認証設計](authentication.md)とADR-0003の案に従い、Cookieを`__Host-fespay.session`、Secure/HttpOnly/SameSite=Lax/Path=/、Domainなしとする。GET `/v1/auth/context`でセッション束縛の同期CSRFトークンを取得し、更新へ`X-CSRF-Token`を送る。匿名入口は`__Host-fespay.preauth`の別文脈を使う。Origin許可リストも検証しCORSは同一Originを基本とする。ログイン/失効で文脈を交換。OAuth callbackは保存state/nonce/セッション束縛で検証する。採用版のBetter Auth/DB adapterとの統合は未実施。
+[認証設計](../domains/authentication.md)と採択済みADR-0003に従い、Cookieを`__Host-fespay.session`、Secure/HttpOnly/SameSite=Lax/Path=/、Domainなしとする。GET `/v1/auth/context`でセッション束縛の同期CSRFトークンを取得し、更新へ`X-CSRF-Token`を送る。匿名入口は`__Host-fespay.preauth`の別文脈を使う。Origin許可リストも検証しCORSは同一Originを基本とする。ログイン/失効で文脈を交換。OAuth callbackは保存state/nonce/セッション束縛で検証する。Better Auth/DB adapterとの統合・実handlerの検証状況は[開発手順](../../../operations/development.md)と各実装PRで確認する。
 認証主体はサーバーで取得する。本人残高・本人履歴へ任意のaccount_idを入力させない。イベント、必要な店舗、対象の本人所有または現在の業務照会権限を要求ごとに検証する。業務で処理した事実やキーを知っていることは照会権限にならない。権限解除後の担当者に業務結果を返さず、現在の権限者が取引IDで照会する。兼務者も本人操作と業務操作を区別する。
 
 scope省略時はMINE。SHOPはshop_id必須、MINE/EVENTではshop_id拒否。SHOP/EVENTは現在の専用業務照会grantを確認し、通常レジにイベント全件を返さない。取引ID照会は本人の取引、または現在の関連業務権限で許可された取引のみ。イベント/店舗を越えるID、存在を秘匿すべき対象は同じ404とする。新規処理の緊急停止だけを理由に既取引照会を止めない。アカウント・セッション停止や権限解除による照会拒否は別に判定する。
@@ -95,4 +95,4 @@ codeは将来追加を許す文字列だが、実装は上表と各operationの�
 
 ## 検証・承認
 
-全論理API ID/全operationと参照の静的確認は[検証手順](validation/README.md)を参照。AT-023/024の金額形式・30桁・安全整数超過、AT-026/027/037/038の同キー復帰、AT-021/058の停止・親子所属、ROL-06の権限解除を優先確認する。アプリ・DBでの試験は未実施。承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
+全論理API ID/全operationと参照の静的確認は[検証手順](../validation/README.md)を参照。AT-023/024の金額形式・30桁・安全整数超過、AT-026/027/037/038の同キー復帰、AT-021/058の停止・親子所属、ROL-06の権限解除を優先確認する。設計の採択記録と検証範囲は[API契約の索引](../README.md#設計段階と検証)を参照する。実handlerの受入・実機・性能試験は実装PRと受入管理表で確認する。

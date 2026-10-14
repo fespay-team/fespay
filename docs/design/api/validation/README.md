@@ -1,7 +1,7 @@
 # API契約の静的検証
 
-状態：設計用チェック。担当：natuki53。更新日：2026-10-09。
-[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [Draft PR #8](https://github.com/fespay-team/fespay/pull/8)。
+状態：設計用チェック。担当：natuki53。更新日：2026-10-14。
+[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8)。
 
 API構造・入力/状態・設計上の復帰/CSV参照手順を確認する。実サーバーやDBを起動する試験ではない。
 
