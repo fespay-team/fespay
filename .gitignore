@@ -27,6 +27,7 @@ test-results/
 *.log
 
 # Temporary local artifacts
+/outputs/
 .tmp/
 .cache/
 .venv/
