@@ -4,11 +4,11 @@
 [CR-0001](../requirements/changes.md)で承認された期限・自動更新・安全な再試行条件は、AT-025、AT-031、AT-032、AT-039、AT-050、AT-068で確認します。
 要件ID欄の `/` による省略表記は現行要件書付録Aの表記を保持しています。
 
-全70件はATの全条件を満たした受入判定が未実施。管理・実施窓口はnatuki53（PR #17の全担当枠を兼任）です。行の担当は受入合格や作者以外のレビューの代用ではありません。
-共通設計書は[EPP-DES-001](../design/basic-design.md)。[Issue #2](https://github.com/fespay-team/fespay/issues/2)は基本設計導入の完了済み履歴で、実装/受入の残件は認証の[Issue #13](https://github.com/fespay-team/fespay/issues/13)と業務/運用の[Issue #14](https://github.com/fespay-team/fespay/issues/14)で管理します。各行の欄に追加記載がある場合は、その個別の設計書・Issueも併せて参照します。#14は業務/運用の実装計画の参照先で、イベント/権限などの領域別Issueは着手時に分割して追加します。
+全70件はATの全条件を満たした受入判定が未実施。行の受入管理窓口はnatuki53です。実装・担当領域の試験は[担当表](../team/ownership.md)と#13/#14/#28～#32の担当者が進めます（認証=yamadahanako2、金銭/台帳=marron46）。管理窓口は実装担当、受入合格や作者以外のレビューの代用ではありません。
+共通設計書は[EPP-DES-001](../design/basic-design.md)。[Issue #2](https://github.com/fespay-team/fespay/issues/2)は基本設計導入の完了済み履歴で、実装/受入の残件は認証の[Issue #13](https://github.com/fespay-team/fespay/issues/13)と業務/運用の[Issue #14](https://github.com/fespay-team/fespay/issues/14)で管理します。各行の欄に追加記載がある場合は、その個別の設計書・Issueも併せて参照します。#14は業務/運用の実装計画の参照先です。分割した画面は#28～#30、イベント/権限は#31、商品/注文/CSVは#32を併せて参照します。
 詳細な実装・競合試験の計画は[EPP-DES-002](../design/detailed-design.md)を参照し、レビュー指摘の具体的な検証条件は同書20.1に記載します。試験状態は未実施のままです。報告欄の「部分検証」は基盤/認証の実装に対する限定的な証跡であり、そのATの全条件・実画面・外部連携・運用の合格を示しません。
 
-| 試験ID | 対象要件（現行要件書表記） | 状態 | 担当 | 追加の設計書 / Issue（共通対応は上記） | 試験報告 / 証跡 |
+| 試験ID | 対象要件（現行要件書表記） | 状態 | 受入管理窓口 | 追加の設計書 / Issue（共通対応は上記） | 試験報告 / 証跡 |
 | --- | --- | --- | --- | --- | --- |
 | AT-001 | ACC-01 | 未実施 | natuki53 | [Issue #13](https://github.com/fespay-team/fespay/issues/13) | — |
 | AT-002 | ACC-02 | 未実施 | natuki53 | [Issue #13](https://github.com/fespay-team/fespay/issues/13) | — |

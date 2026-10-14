@@ -1,6 +1,6 @@
 # 設計採択後の開発計画
 
-更新日：2026-10-14。ユーザー指定によりFE・BE・DB・運用・準備はnatuki53が兼任する。作者以外のレビューはdevelopersチームへ依頼する。
+更新日：2026-10-14。実装はFE-1=popoten0630-dev、FE-2=KawataKenshirou、BE-1（金銭/台帳）=marron46、BE-2（認証/認可と関連業務API）=yamadahanako2へ分担する。DB/運用/総合の調整窓口はnatuki53。[担当表](../team/ownership.md)と[担当変更 #36](https://github.com/fespay-team/fespay/issues/36)を参照する。
 
 採択と現在の工程は[共通記録](design-status.md)。主要設計は採択済み、基盤/認証は部分実装済みで、全機能の受入/公開は残る。
 
@@ -21,9 +21,9 @@ GitHubアカウントからFE/BEの役割を推定しない。設計採択、実
 | Issue | 完了条件 / 現在の状態 | 担当 |
 | --- | --- | --- |
 | [#11 開発基盤](https://github.com/fespay-team/fespay/issues/11) | 承認記録同期、固定workspace、起動/型/build、開発migration、認証の隔離DB検証、CI、PRレビュー。PR #15で完了 | natuki53 |
-| [#12 担当・未決割当](https://github.com/fespay-team/fespay/issues/12) | FE/BE/DB個人割当、相互レビュー、U-01～U-20の責任者・期限・依存。割当はPR #17で完了 | natuki53（兼任）、[決定管理表](../team/decisions.md) |
-| [#13 認証統合](https://github.com/fespay-team/fespay/issues/13) | /v1/authアダプター、業務MFA/CSRF/Origin、実メール/Google、因子/退会・失効の受入検証 | natuki53（BE-2 / FE-1 / DB兼任） |
-| [#14 業務・worker](https://github.com/fespay-team/fespay/issues/14) | 金銭・注文・在庫の小さな実装PR、並行/再送/切断、CSV/SSE、移行/性能/復旧 | natuki53（BE / FE / DB兼任） |
+| [#12 担当・未決割当](https://github.com/fespay-team/fespay/issues/12) | FE/BE/DB個人割当、相互レビュー、U-01～U-20の責任者・期限・依存。割当はPR #17で完了 | natuki53（準備時点の兼任記録）、[決定管理表](../team/decisions.md) |
+| [#13 認証統合](https://github.com/fespay-team/fespay/issues/13) | /v1/authアダプター、業務MFA/CSRF/Origin、実メール/Google、因子/退会・失効の受入検証 | yamadahanako2（BE-2）、認証画面はpopoten0630-dev（#28） |
+| [#14 業務・worker](https://github.com/fespay-team/fespay/issues/14) | 金銭・注文・在庫の小さな実装PR、並行/再送/切断、CSV/SSE、移行/性能/復旧 | marron46（BE-1）、関連領域は#28～#32の担当へ分担 |
 
 未決事項を設計採択だけで消さない。U-03の公開契約、U-04/U-18/U-20の保存モデル/制約は採択済み。UUID生成方式・分離レベル/負荷・現金運用・worker保持値・クラウド/鍵・実機・法務/公開条件は責任者の決定・実証を残す。#12 / PR #17で全責任者をnatuki53へ割当済み。基盤の採択記録は[ADR-0005](../adr/0005-development-foundation.md)。
 
@@ -38,4 +38,4 @@ DB制約104件、API契約378件/参照69件の検証をAT-001～070の実装受
 
 2026-10-14、[PR #15](https://github.com/fespay-team/fespay/pull/15)をKawataKenshirouの最終head承認後にマージし、Issue #11を完了。認証の部分実装は[Issue #16](https://github.com/fespay-team/fespay/issues/16) / PR #19とIssue #21 / PR #23で完了。親#13/#14は残る全条件が揃うまでOPENとし、子Issueの部分完了だけで閉じない。
 
-画面プロトタイプはIssue #18/#24、PR #20/#25でレビュー・統合待ち。イベント/参加/権限などを含む領域別の実装Issueは着手時に分割し、ATの担当窓口/計画参照だけで実装タスクが完了したと扱わない。今回の変更は記録整理で、次の実装は行わない。
+画面プロトタイプはIssue #18/#24、PR #20/#25でレビュー・統合待ち。認証画面は#28、参加者画面は#29、管理画面は#30、イベント/参加/権限は#31、商品/在庫/注文/集計/CSVは#32へ分割済み。ATの管理窓口/計画参照だけで実装タスクが完了したと扱わない。今回の変更は担当記録の更新で、実装・試験の完了状態は変更しない。
