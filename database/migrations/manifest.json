@@ -8,5 +8,10 @@
     "id": "0002-auth",
     "file": "database/migrations/0002-auth.sql",
     "sha256": "eeea187f5ea8f93e05e702e15f1bf23ca01188396b94dd657669a3b724209a36"
+  },
+  {
+    "id": "0003-identity-public-id",
+    "file": "database/migrations/0003-identity-public-id.sql",
+    "sha256": "69c3b6cbbe12a40e066a38df43e95533f6b5d169eb0dca06a02ab258c14bf6dd"
   }
 ]
