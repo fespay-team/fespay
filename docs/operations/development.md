@@ -1,6 +1,6 @@
 # ローカル開発と検証
 
-開発基盤はPR #15で承認・マージ済み。Node.js 24、npm 11、Python 3.13+、Docker/Composeが必要。WindowsはDocker DesktopのLinux containerを使う。担当natuki53。Issue #16の認証文脈・本人session APIはPR #19でマージ済みで、[公開範囲と検証](../testing/auth-session-adapter.md)を参照する。Issue #21の[認証手段一覧](../testing/auth-identity-list.md)と追記migrationは実装レビュー対象。
+開発基盤はPR #15で承認・マージ済み。Node.js 24、npm 11、Python 3.13+、Docker/Composeが必要。WindowsはDocker DesktopのLinux containerを使う。担当natuki53。Issue #16の認証文脈・本人session APIはPR #19でマージ済みで、[公開範囲と検証](../testing/auth-session-adapter.md)を参照する。Issue #21の[認証手段一覧](../testing/auth-identity-list.md)と0003追記migrationもPR #23で承認・マージ済み。現在の範囲と残件は[採択・進捗記録](../project/design-status.md)。
 
 ## 初回
 
