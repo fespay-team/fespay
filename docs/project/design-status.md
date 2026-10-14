@@ -46,6 +46,6 @@ PR #23はディレクトリ整理後のaef930dへのmarron46再承認を採用�
 
 ## 次工程への引継ぎ
 
-[開発計画](development-plan.md)を参照する。全担当枠はnatuki53が兼任し、作者以外のdevelopersがレビューする。まず公開メール登録と業務accountの作成/関連付けを小さなPRへ分け、確認/login・配送・画面の統合へ進む。金銭APIの公開前に現在認可と業務MFAの成立/確認を満たす。
+[開発計画](development-plan.md)を参照する。準備時点のnatuki53全枠兼任から実装チームへ分担済み。FEはpopoten0630-dev/KawataKenshirou、金銭/台帳はmarron46（#14）、認証/認可・イベント/商品/注文/CSVはyamadahanako2（#13/#31/#32）が担当し、作者以外の担当者が相互レビューする。DB/運用/総合・受入管理の窓口はnatuki53。[担当表](../team/ownership.md)と[担当変更 #36](https://github.com/fespay-team/fespay/issues/36)を参照する。まず公開メール登録と業務accountの作成/関連付けを小さなPRへ分け、確認/login・配送・画面の統合へ進む。金銭APIの公開前に現在認可と業務MFAの成立/確認を満たす。
 
 今回の整理は承認・担当・進捗の記録同期で、残る設定/値/外部合意の決定や新しい実装を行ったものではない。今後の採択変更は別PR/ADR、要件変更はCR手順で扱う。ローカルoutputs内のWBSは共有版を確認せずに移動・更新しない。
