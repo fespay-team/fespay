@@ -267,6 +267,20 @@ API確認の例として `https://localhost:8443/v1/auth/context` を開くと�
 
 Docker設定がmainへマージ済みになった後の例です。GitHubへのpushはチームの権限が必要です。まだ設定確認用ブランチを使っている場合は、先に担当へ切替時期を確認します。
 
+初めてコミットする前に、以下で作者名とメールの設定を確認します。何も表示されない項目があれば、自分の値を設定します。これはこのリポジトリだけの設定です。
+
+```bash
+git config user.name
+git config user.email
+```
+
+次の２行は、引用符内を**自分の表示名とコミット用メールアドレスに書き換えてから**実行します。メールを公開したくない場合は、GitHubのSettings → Emailsで自分のnoreplyアドレスを確認して使います。設定はpush権限の取得やGitHubへのログインとは別です。
+
+```bash
+git config --local user.name "あなたの表示名"
+git config --local user.email "あなたのコミット用メールアドレス"
+```
+
 1. `git status` で変更を確認します。変更があれば先にコミットするか担当へ相談し、強制的に捨てないでください。
 2. 変更のない状態でmainを更新し、自分の作業ブランチを作ります。以下の `feature/my-task` は例です。チームで決めたIssue・作業名に合わせたbranch名に置き換えます。
 
@@ -309,6 +323,8 @@ Docker設定がmainへマージ済みになった後の例です。GitHubへのp
 | migrationのchecksumエラー | 適用済みSQLが変わっていないか確認。履歴テーブルやchecksumを手動修正しない |
 | 更新後も古い画面 | 編集フォルダーと起動中のcheckoutが同じか確認し、ブラウザー再読込。依存変更後は `local up` |
 | Gitのpull/switchが失敗 | `git status` で変更と現在のbranchを確認。force操作で回避せず担当へ相談 |
+| `Author identity unknown` | 上の作者名・メールの設定を確認してからコミットを再実行 |
+| pushで認証・権限エラー | GitHubへログインしている本人のアカウントとチームのWrite権限を確認。認証画面は本人が操作し、パスワードやtokenをチャットへ送らない |
 
 ### PowerShellの実行ポリシー
 
