@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 | 2026-10-09 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 | 2026-10-14 |
 | 要件 / 受入試験 | API-01～05、DAT-01～03、LED-01～06、WAL-01～03、TX-01～06、INV-01～05、REF-01～04、EXP-01～03、ROL-03/06 / AT-010、021～024、026～028、035～038、042～058 |
 | Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0002](../../adr/0002-refund-api-workflows.md)、[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
@@ -63,7 +63,7 @@ API担当はHTTP入力/応答/権限/エラー/再送を定義し、DB担当は[
 | 完了/削除 | 全残高/拘束/未決cash/refund/order/失効/差異を再照合。取引親のcascade delete不可 |
 | 退会/復元 | 30日後の個人情報分離と取引7年保持を分け、復元後に削除/失効を再適用 |
 
-[HTTP入力・互換性](http-contract.md)、[画面復帰](client-flows.md)、[CSV列・配信](csv-contract.md)は物理モデルを指定せずAPI側で具体化した。client-policyは公開配信設定でDB保存を前提にしない。CSVのsnapshot_id予約は実際の読取開始とは分け、生成開始時のsnapshot_atを同じjobの再試行でも保持できる方式をDB担当と検証する。
+[HTTP入力・互換性](common/http-contract.md)、[画面復帰](flows/client-flows.md)、[CSV列・配信](domains/csv-contract.md)は物理モデルを指定せずAPI側で具体化した。client-policyは公開配信設定でDB保存を前提にしない。CSVのsnapshot_id予約は実際の読取開始とは分け、生成開始時のsnapshot_atを同じjobの再試行でも保持できる方式をDB担当と検証する。
 
 ## 次のレビューと実証
 

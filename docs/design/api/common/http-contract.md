@@ -1,10 +1,10 @@
 # HTTP入力・エラー・互換性
 
-状態：API設計案、FE/BEレビュー前。担当：natuki53。更新日：2026-10-09。
+状態：設計採択済み（PR #8）。担当：natuki53。レビュー者：marron46。更新日：2026-10-14。
 要件：API-01～05、SEC-07～10、NET-02、PWA-02。受入：AT-037/038、058～062。
-[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../adr/0004-api-client-recovery-and-wire-contracts.md)。
+[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../../adr/0004-api-client-recovery-and-wire-contracts.md)。
 
-正本候補は[OpenAPI](openapi.yaml)。上限はx-http-policy、コード対応はx-error-catalog、操作の互換性はx-client-revision-policy。物理DBと実装済み動作を宣言する文書ではない。
+HTTP契約の正本は[OpenAPI](../openapi.yaml)。上限はx-http-policy、コード対応はx-error-catalog、操作の互換性はx-client-revision-policy。物理DBと実装済み動作を宣言する文書ではない。
 
 ## 入力
 
@@ -39,7 +39,7 @@ Errorはcode/message/request_id/retryableと必要時のcurrent_state_or_query�
 
 既知コードのHTTP/retryable/画面動作はx-error-catalog。未知コードはHTTP分類で案内し、自動で新規金銭POSTしない。コード追加で/v1既存フィールドの意味を変えない。
 
-外部Google callbackだけはOAuth応答の未知拡張queryを制限内で無視する。[画面復帰](client-flows.md)とx-query-schemaが例外を定義し、同名重複・code/error/stateの曖昧さは拒否する。
+外部Google callbackだけはOAuth応答の未知拡張queryを制限内で無視する。[画面復帰](../flows/client-flows.md)とx-query-schemaが例外を定義し、同名重複・code/error/stateの曖昧さは拒否する。
 
 ## 旧画面と更新
 
@@ -53,6 +53,6 @@ GET `/v1/client-policy`はDB不要の公開配信設定。初期current_revision
 
 既成立の同キー・同内容再送は現在の照会認可/hash照合後に元効果へ復帰し、リビジョン不足で成功を失敗へ変えない。未知キーは新規処理として止める。リビジョンを要求hashへ含めず、更新後も元キーへ復帰できる。ヘッダーは認可の代用ではなく、上限以上でも入力・金額・版を必ず検証する。
 
-払戻し受渡しの開始はCURRENT、開始済みcompleteCashRefundはRECOVERY。新しいprepareChargeはCURRENT、受領済みcompleteChargeはRECOVERY。準備/本人承認/現金事実を旧版で迂回しない。照会・RECOVERY・既成立キーの解釈を維持する互換層を同じ配信で用意し、維持できない破壊的変更は/v2等へ分離する。reloadの条件は[画面復帰](client-flows.md)。
+払戻し受渡しの開始はCURRENT、開始済みcompleteCashRefundはRECOVERY。新しいprepareChargeはCURRENT、受領済みcompleteChargeはRECOVERY。準備/本人承認/現金事実を旧版で迂回しない。照会・RECOVERY・既成立キーの解釈を維持する互換層を同じ配信で用意し、維持できない破壊的変更は/v2等へ分離する。reloadの条件は[画面復帰](../flows/client-flows.md)。
 
 根拠：[HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)、現行API/NET/PWA要件。実HTTP/プロキシ/ブラウザー試験は未実施。
