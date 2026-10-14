@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当natuki53、PR #17で割当済み） |
 | 更新日 / API ID | 2026-10-09 / A01～A05、E01～E10、S01～S04 |
 | 要件 / 受入試験 | ACC-01～06、JOIN-01～03、EVT-01～06、CFG-01～06、STF-01～05、ROL-01～06、SEC-01～03、PRV-03～05 / AT-001～021、054、063、070 |
 | Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
@@ -47,4 +47,4 @@ completion GETは未解決件数と先頭100件/カーソルを返し、POSTは�
 
 公開ゲートG1〜G5の責任者・証跡・確認/取消はプラットフォーム特権で記録する。実際の外部確認や試験を証跡にし、画面入力だけで適法性・性能・品質を認定しない。未完了ゲートでも開発/模擬試験は進められるが、実金銭受付を開放しない。
 
-承認・認証基盤統合・実機・受入試験：未実施。
+認証文脈/本人セッションは[PR #19](https://github.com/fespay-team/fespay/pull/19)で承認・マージ済み。[認証手段一覧](../../testing/auth-identity-list.md)は後続の実装レビュー対象。認証全体・実OAuth・実機・受入試験の合格は未判定。

@@ -2,7 +2,7 @@
 
 学園祭・バザーなどのイベント内決済プラットフォーム。
 GitHub：[fespay-team/fespay](https://github.com/fespay-team/fespay)（public）。
-API/DB設計はPR #8/#9、開発基盤はPR #15で採択済み。[認証文脈・本人セッションAPI](docs/testing/auth-session-adapter.md)の実装をレビュー中で、業務機能全体の実装受入は未実施です。
+API/DB設計はPR #8/#9、開発基盤はPR #15で採択済み。[認証文脈・本人セッションAPI](docs/testing/auth-session-adapter.md)はPR #19でマージ済み。[本人の認証手段一覧](docs/testing/auth-identity-list.md)を実装レビュー中で、業務機能全体の実装受入は未実施です。
 
 起動・検証は[ローカル開発手順](docs/operations/development.md)、担当と後続Issueは[開発計画](docs/project/development-plan.md)を参照してください。
 
