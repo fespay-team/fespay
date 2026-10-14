@@ -1,0 +1,7 @@
+# Replace the UUID/hostname for a dedicated staging tunnel.
+tunnel: YOUR_DEDICATED_TUNNEL_UUID
+credentials-file: /run/secrets/tunnel.json
+ingress:
+  - hostname: fespay-staging.mu-natuki.com
+    service: http://gateway:8080
+  - service: http_status:404

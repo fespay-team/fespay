@@ -22,8 +22,8 @@ const app = createApp(
   },
   createSessionApi(config, auth, pool),
 );
-const server = serve({ fetch: app.fetch, hostname: '127.0.0.1', port: config.port });
-console.log(`FesPay API listening on loopback port ${config.port}`);
+const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
+console.log(`FesPay API listening on port ${config.port}`);
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
     const deadline = setTimeout(() => process.exit(1), 5000);

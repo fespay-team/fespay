@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/api/src:/workspace/apps/api/src:ro
+  web:
+    build:
+      target: development
+    volumes:
+      - ./apps/web/src:/workspace/apps/web/src:ro
+      - ./apps/web/index.html:/workspace/apps/web/index.html:ro
+      - ./apps/web/vite.config.ts:/workspace/apps/web/vite.config.ts:ro
+    environment:
+      FESPAY_API_PROXY: http://api:3000
+      FESPAY_VITE_HOST: 0.0.0.0
+      FESPAY_HMR_PORT: ${FESPAY_HTTPS_PORT:-8443}
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+  gateway:
+    ports:
+      - 127.0.0.1:${FESPAY_HTTPS_PORT:-8443}:443
+    volumes:
+      - ./infra/docker/Caddyfile.local:/etc/caddy/Caddyfile:ro

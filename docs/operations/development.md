@@ -41,3 +41,7 @@ GitHub ActionsはLinux/macOS/Windowsの型/build/基本試験、Linuxの設計/A
 ## 終了・再開
 
 devはCtrl+C、DBは `docker compose stop db`。再開は `docker compose up -d --wait db`。データを残す場合はstopを使う。ローカルデータの破棄が必要なときだけ明示してvolumeを削除する。共有/本番の資格情報や運用DBには開発migrationを使わない。
+
+## Dockerだけで起動する場合
+
+チームの各PCでFE/API/DB/HTTPSを揃える方法と共有ステージングの配置手順は、[各PC用Dockerと共有ステージング](docker-environments.md)を参照してください。

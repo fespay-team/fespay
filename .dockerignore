@@ -1,0 +1,14 @@
+.git
+node_modules
+**/node_modules
+.env
+.env.*
+secrets
+outputs
+.venv
+**/dist
+**/__pycache__
+**/*.pyc
+**/*.log
+.DS_Store
+prototype

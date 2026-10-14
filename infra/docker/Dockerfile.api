@@ -1,0 +1,35 @@
+FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS dependencies
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+RUN npm ci
+
+FROM dependencies AS development
+COPY apps/api apps/api
+COPY database database
+COPY docs/design/database/sql docs/design/database/sql
+COPY infra/docker/migrate.mjs infra/docker/migrate.mjs
+USER node
+CMD ["node", "--watch", "--import", "tsx", "apps/api/src/server.ts"]
+
+FROM dependencies AS build
+COPY apps/api apps/api
+RUN npm run build --workspace=@fespay/api
+
+FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /workspace/apps/api/dist apps/api/dist
+USER node
+CMD ["node", "apps/api/dist/server.js"]
+
+FROM runtime AS migration
+COPY database/migrations database/migrations
+COPY docs/design/database/sql docs/design/database/sql
+COPY infra/docker/migrate.mjs infra/docker/migrate.mjs
+ENV NODE_ENV=staging
+CMD ["node", "infra/docker/migrate.mjs", "--isolated-docker"]

@@ -1,0 +1,99 @@
+name: ${FESPAY_PROJECT:?Generate .env.docker.local or .env.docker.staging}
+services:
+  db:
+    image: postgres@sha256:0780ef0827baebe99b75a7feb7d97110d6ec1e4df3e5c4ec5b9a5143ef90ac3a
+    environment:
+      POSTGRES_USER: fespay_owner
+      POSTGRES_DB: ${FESPAY_DATABASE:?Required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Required}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test:
+        [CMD-SHELL, "pg_isready -h 127.0.0.1 -U fespay_owner -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  migrate:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+      target: migration
+    network_mode: service:db
+    environment:
+      NODE_ENV: staging
+      FESPAY_ENV: ${FESPAY_ENV:?Required}
+      DATABASE_ADMIN_URL: postgresql://fespay_owner:${POSTGRES_PASSWORD:?Required}@127.0.0.1:5432/${FESPAY_DATABASE:?Required}
+      FESPAY_APP_PASSWORD: ${FESPAY_APP_PASSWORD:?Required}
+    depends_on:
+      db: { condition: service_healthy }
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+      target: runtime
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      APP_ORIGIN: ${APP_ORIGIN:?Required}
+      DATABASE_URL: postgresql://fespay_app:${FESPAY_APP_PASSWORD:?Required}@db:5432/${FESPAY_DATABASE:?Required}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Required}
+    networks: [frontend, database]
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+      target: runtime
+    networks: [frontend]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    restart: unless-stopped
+  gateway:
+    image: caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    environment:
+      FESPAY_SITE_HOST: ${FESPAY_SITE_HOST:-localhost}
+      FESPAY_STAGE_USER: ${FESPAY_STAGE_USER:-unused}
+      FESPAY_STAGE_PASSWORD_HASH: ${FESPAY_STAGE_PASSWORD_HASH:-unused}
+      FESPAY_GATEWAY_PORT: 443
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [frontend]
+    depends_on:
+      api: { condition: service_healthy }
+      web: { condition: service_healthy }
+    healthcheck:
+      test: [CMD-SHELL, "nc -z 127.0.0.1 $$FESPAY_GATEWAY_PORT"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    restart: unless-stopped
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
+networks:
+  frontend:
+  database:
+    internal: true
