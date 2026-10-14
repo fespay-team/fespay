@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import ChargeFlow, { type ChargeOutcome } from "./ChargeFlow";
+import FittedBalance from "./FittedBalance";
 import HistoryView from "./HistoryView";
 import SendFlow, { type SendReceipt } from "./SendFlow";
 import { formatYen as yen, parseStoredAmount, stringifyMoney } from "./money";
@@ -349,6 +350,15 @@ function App() {
     ledger.accounts.find((account) => account.id === ledger.activeAccountId) ??
     ledger.accounts[0];
   const balance = activeAccount.balance;
+  const balanceDigits = balance.toString().length;
+  const balanceSizeClass =
+    balanceDigits >= 19
+      ? "is-massive"
+      : balanceDigits >= 13
+        ? "is-extra-long"
+        : balanceDigits >= 9
+          ? "is-long"
+          : "";
   const transactions = activeAccount.transactions;
   const [flipped, setFlipped] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -647,7 +657,7 @@ function App() {
                     </div>
                     <div className="balance-block">
                       <span>{activeAccount.name}の残高</span>
-                      <strong>{yen(balance)}</strong>
+                      <FittedBalance className={balanceSizeClass} value={yen(balance)} />
                     </div>
                     <div className="wallet-footer">
                       <span className="flip-pill">
@@ -891,12 +901,12 @@ function App() {
             </div>
             <span className="payment-qr-caption">お店のスタッフに提示してください</span>
           </section>
-          <section className="payment-balance" aria-label="現在の残高">
+          <section className={`payment-balance${balanceSizeClass ? " is-expanded" : ""}`} aria-label="現在の残高">
             <span>
               <span>現在の残高</span>
               <small>{EVENT_NAME}</small>
             </span>
-            <strong>{yen(balance)}</strong>
+            <FittedBalance className={balanceSizeClass} value={yen(balance)} />
           </section>
           <button
             className="payment-scan-button"
@@ -937,7 +947,7 @@ function App() {
           </div>
           <div className="content-card account-balance">
             <span>みどりの森まつりの残高</span>
-            <strong>{yen(balance)}</strong>
+            <FittedBalance className={balanceSizeClass} value={yen(balance)} />
             <small>デモデータはこのブラウザーに保存されます</small>
           </div>
           <section className="content-card demo-accounts" aria-label="デモアカウントの切り替え">

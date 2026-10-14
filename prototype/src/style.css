@@ -359,11 +359,22 @@ button:focus-visible {
   text-shadow: 0 2px 5px #2c5dd341;
 }
 .balance-block strong {
+  min-width: 0;
   font-family: Arial, "Yu Gothic", sans-serif;
   font-size: clamp(43px, 12.4vw, 62px);
   line-height: 1.08;
   letter-spacing: 0.005em;
+  white-space: nowrap;
   text-shadow: 0 4px 9px #214dbc3d;
+}
+.balance-block strong.is-long {
+  font-size: clamp(32px, 10vw, 48px);
+}
+.balance-block strong.is-extra-long {
+  font-size: clamp(24px, 7.5vw, 36px);
+}
+.balance-block strong.is-massive {
+  font-size: clamp(18px, 5.6vw, 27px);
 }
 .wallet-footer {
   display: flex;
@@ -1022,6 +1033,17 @@ button:focus-visible {
     800 36px Arial,
     sans-serif;
   color: #234d9a;
+  min-width: 0;
+  white-space: nowrap;
+}
+.account-balance > strong.is-long {
+  font-size: 30px;
+}
+.account-balance > strong.is-extra-long {
+  font-size: 24px;
+}
+.account-balance > strong.is-massive {
+  font-size: 18px;
 }
 .account-balance > small {
   color: #91a1ba;

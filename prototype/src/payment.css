@@ -171,6 +171,24 @@
   font-size: clamp(23px, 6vw, 28px);
   white-space: nowrap;
 }
+.payment-balance.is-expanded {
+  align-items: flex-start;
+  flex-direction: column;
+}
+.payment-balance.is-expanded strong {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+.payment-balance strong.is-long {
+  font-size: clamp(20px, 6vw, 28px);
+}
+.payment-balance strong.is-extra-long {
+  font-size: clamp(18px, 5vw, 24px);
+}
+.payment-balance strong.is-massive {
+  font-size: clamp(16px, 4.5vw, 22px);
+}
 
 .payment-scan-button {
   display: flex;
