@@ -450,11 +450,14 @@
 }
 
 .charge-flow__amount-summary strong {
+  min-width: 0;
   margin-left: auto;
   color: #1f487d;
   font:
     900 17px Arial,
     sans-serif;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .charge-flow__money-card {
@@ -482,11 +485,25 @@
 }
 
 .charge-flow__money-row strong {
+  min-width: 0;
   color: #154a88;
   font:
     900 clamp(22px, 6vw, 27px) Arial,
     sans-serif;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.charge-flow__money-row.is-long {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 9px 0;
+}
+
+.charge-flow__money-row.is-long strong {
+  font-size: clamp(18px, 5.7vw, 22px);
 }
 
 .charge-flow__equals {
@@ -550,10 +567,17 @@
 }
 
 .charge-flow__success strong {
+  max-width: 100%;
   color: #155e83;
   font:
     900 37px Arial,
     sans-serif;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.charge-flow__success.is-long strong {
+  font-size: clamp(18px, 5.7vw, 22px);
 }
 
 .charge-flow__success small {

@@ -12,6 +12,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import { formatYen } from "./money";
 import "./send-flow.css";
 
 export type SendRecipient = { id: string; name: string };
@@ -19,22 +20,22 @@ export type SendRecipient = { id: string; name: string };
 export type SendReceipt = {
   transactionId: string;
   recipientName: string;
-  amount: number;
+  amount: bigint;
   completedAt: string;
-  balanceAfter: number;
+  balanceAfter: bigint;
 };
 
 type SendFlowProps = {
-  balance: number;
+  balance: bigint;
   senderName: string;
   recipients: SendRecipient[];
   onClose: () => void;
-  onSend: (recipientId: string, amount: number, message: string) => SendReceipt | null;
+  onSend: (recipientId: string, amount: bigint, message: string) => SendReceipt | null;
 };
 
 type Stage = "recipient" | "amount" | "review" | "receipt";
 
-const formatYen = (amount: number) => `¥${amount.toLocaleString("ja-JP")}`;
+const MAX_SEND_DIGITS = 30;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -132,10 +133,22 @@ export default function SendFlow({
       person.name.toLocaleLowerCase("ja-JP").includes(normalizedQuery) ||
       person.id.toLocaleLowerCase("ja-JP").includes(normalizedQuery),
   );
-  const amount = Number(amountText);
+  const amount = /^\d+$/.test(amountText) && amountText.length <= MAX_SEND_DIGITS
+    ? BigInt(amountText)
+    : 0n;
   const amountError =
-    !amountText || !Number.isSafeInteger(amount) || amount <= 0
+    !amountText
       ? "1円以上の整数を入力してください"
+      : amountText.includes("-")
+        ? "マイナスの金額は入力できません"
+      : amountText.includes(".")
+        ? "小数は入力できません。1円単位で入力してください"
+      : !/^\d+$/.test(amountText)
+        ? "半角数字のみで入力してください"
+      : amountText.length > MAX_SEND_DIGITS
+        ? `金額は${MAX_SEND_DIGITS}桁以内で入力してください`
+      : amount <= 0n
+        ? "1円以上の整数を入力してください"
       : amount > balance
         ? "残高が不足しています"
         : "";
@@ -319,10 +332,7 @@ export default function SendFlow({
                   inputMode="numeric"
                   autoComplete="off"
                   value={amountText}
-                  onChange={(event) => {
-                    const next = event.target.value.normalize("NFKC");
-                    if (/^\d*$/.test(next)) setAmountText(next.slice(0, 17));
-                  }}
+                  onChange={(event) => setAmountText(event.target.value)}
                   placeholder="0"
                   aria-describedby="send-amount-help send-amount-error"
                   aria-invalid={Boolean(amountText && amountError)}
@@ -330,11 +340,11 @@ export default function SendFlow({
                 <span>円</span>
               </div>
               <div className="send-flow__amount-meta">
-                <span id="send-amount-help">1円単位で入力できます</span>
+                <span id="send-amount-help">1円単位、30桁まで入力できます</span>
                 <span>残高 {formatYen(balance)}</span>
               </div>
               <p className="send-flow__field-error" id="send-amount-error" role="status">
-                {amountText ? amountError : balance === 0 ? "残高がありません。先にチャージしてください。" : ""}
+                {amountText ? amountError : balance === 0n ? "残高がありません。先にチャージしてください。" : ""}
               </p>
               <label className="send-flow__field-label" htmlFor="send-message">
                 メッセージ <span>任意</span>

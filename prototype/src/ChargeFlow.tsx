@@ -16,20 +16,21 @@ import {
   X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { formatYen, MAX_CHARGE_DIGITS } from "./money";
 import "./charge-flow.css";
 
 export type ChargeOutcome = {
   transactionId: string;
-  amount: number;
+  amount: bigint;
   completedAt: string;
   eventName: string;
   displayName: string;
   verificationCode: string;
-  balanceAfter: number;
+  balanceAfter: bigint;
 };
 
 type ChargeFlowProps = {
-  balance: number;
+  balance: bigint;
   eventName: string;
   displayName: string;
   verificationCode: string;
@@ -47,9 +48,6 @@ const stageNumber: Record<Stage, number> = {
   receipt: 6,
 };
 
-const MAX_CHARGE_DIGITS = 9;
-const yen = (value: number) => `¥${value.toLocaleString("ja-JP")}`;
-
 function getAmountError(value: string): string | null {
   if (value === "") return null;
   if (value.includes("-")) return "マイナスの金額は入力できません。";
@@ -57,7 +55,7 @@ function getAmountError(value: string): string | null {
   if (!/^\d+$/.test(value)) return "半角数字のみで入力してください。";
   if (value.length > MAX_CHARGE_DIGITS)
     return `金額は${MAX_CHARGE_DIGITS}桁以内で入力してください。`;
-  if (Number(value) === 0) return "1円以上の金額を入力してください。";
+  if (BigInt(value) === 0n) return "1円以上の金額を入力してください。";
   return null;
 }
 
@@ -178,7 +176,7 @@ export default function ChargeFlow({
   const qrValue = `FESPAY-DEMO-CHARGE-RECEPTION:${qrSession.current}:${qrSlot}`;
   const amountError = getAmountError(amountText);
   const validAmount = amountText !== "" && amountError === null;
-  const amount = validAmount ? Number(amountText) : 0;
+  const amount = validAmount ? BigInt(amountText) : 0n;
 
   const goBack = () => {
     if (stage === "identity") setStage("qr");
@@ -435,14 +433,14 @@ export default function ChargeFlow({
                     type="button"
                     onClick={() => setAmountText(String(preset))}
                   >
-                    {yen(preset)}
+                    {formatYen(BigInt(preset))}
                   </button>
                 ))}
               </div>
               <div className="charge-flow__amount-summary">
                 <WalletCards size={18} />
                 <span>現在の残高</span>
-                <strong>{yen(balance)}</strong>
+                <strong>{formatYen(balance)}</strong>
               </div>
             </>
           )}
@@ -453,18 +451,18 @@ export default function ChargeFlow({
                 来場者から現金を受け取る前に、金額を一緒に確認してください。
               </p>
               <div className="charge-flow__money-card">
-                <div className="charge-flow__money-row">
+                <div className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}>
                   <span>
                     <Banknote size={22} /> 受け取る現金
                   </span>
-                  <strong>{yen(amount)}</strong>
+                  <strong>{formatYen(amount)}</strong>
                 </div>
                 <div className="charge-flow__equals">同額</div>
-                <div className="charge-flow__money-row">
+                <div className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}>
                   <span>
                     <WalletCards size={22} /> 追加する残高
                   </span>
-                  <strong>{yen(amount)}</strong>
+                  <strong>{formatYen(amount)}</strong>
                 </div>
               </div>
               <div className="charge-flow__review-meta">
@@ -480,7 +478,7 @@ export default function ChargeFlow({
                 </div>
                 <div>
                   <span>チャージ後の残高</span>
-                  <strong>{yen(balance + amount)}</strong>
+                  <strong>{formatYen(balance + amount)}</strong>
                 </div>
               </div>
               <label className="charge-flow__check-row charge-flow__cash-check">
@@ -490,7 +488,7 @@ export default function ChargeFlow({
                   onChange={(event) => setCashConfirmed(event.target.checked)}
                 />
                 <span>
-                  来場者から現金{yen(amount)}を受け取り、金額を確認しました
+                  来場者から現金{formatYen(amount)}を受け取り、金額を確認しました
                 </span>
               </label>
               <p className="charge-flow__notice">
@@ -509,12 +507,12 @@ export default function ChargeFlow({
                 <CheckCircle2 size={18} />
                 <span>⑤ デモ残高への追加と取引記録を完了</span>
               </div>
-              <div className="charge-flow__success">
+              <div className={`charge-flow__success${receipt.amount.toString().length > 9 ? " is-long" : ""}`}>
                 <span className="charge-flow__success-icon">
                   <Check size={32} strokeWidth={3} />
                 </span>
                 <span>チャージ金額</span>
-                <strong>{yen(receipt.amount)}</strong>
+                <strong>{formatYen(receipt.amount)}</strong>
                 <small>現金と同額をデモ残高に追加しました</small>
               </div>
               <div className="charge-flow__section-label">
@@ -527,7 +525,7 @@ export default function ChargeFlow({
                 </div>
                 <div>
                   <span>更新後の残高</span>
-                  <strong>{yen(receipt.balanceAfter)}</strong>
+                  <strong>{formatYen(receipt.balanceAfter)}</strong>
                 </div>
                 <div>
                   <span>取引ID</span>

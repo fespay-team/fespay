@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { ArrowDownLeft, ChevronDown, Plus, ReceiptText, Search, Send, UtensilsCrossed, X } from "lucide-react";
+import { formatYen } from "./money";
 import "./history-view.css";
 
 type HistoryTransaction = {
   id: string;
   title: string;
   date: string;
-  amount: number;
+  amount: bigint;
   kind: "payment" | "charge" | "transfer_sent" | "transfer_received";
   charge?: { completedAt?: string };
   transfer?: {
@@ -34,8 +35,11 @@ const filters: { value: Filter; label: string }[] = [
 const kindLabel = (kind: HistoryTransaction["kind"]) =>
   filters.find((filter) => filter.value === kind)?.label ?? "取引";
 
-const formatAmount = (amount: number) =>
-  `${amount >= 0 ? "+" : "−"} ¥${Math.abs(amount).toLocaleString("ja-JP")}`;
+const formatAmount = (amount: bigint) =>
+  `${amount >= 0n ? "+" : "−"} ${formatYen(amount)}`;
+
+const isLongAmount = (amount: bigint) =>
+  (amount < 0n ? -amount : amount).toString().length > 12;
 
 export default function HistoryView({ transactions }: HistoryViewProps) {
   const [query, setQuery] = useState("");
@@ -109,7 +113,10 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
         {visibleTransactions.length > 0 ? (
           <div className="history-list">
             {visibleTransactions.map((transaction) => (
-              <details className="history-entry" key={transaction.id}>
+              <details
+                className={`history-entry${isLongAmount(transaction.amount) ? " is-long-amount" : ""}`}
+                key={transaction.id}
+              >
                 <summary>
                   <span className={`history-entry-icon ${transaction.kind}`} aria-hidden="true">
                     {transaction.kind === "charge" ? (
@@ -126,7 +133,7 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                     <strong>{transaction.title}</strong>
                     <small>{transaction.date} · {kindLabel(transaction.kind)}</small>
                   </span>
-                  <span className={`history-entry-amount ${transaction.amount >= 0 ? "positive" : ""}`}>
+                  <span className={`history-entry-amount ${transaction.amount >= 0n ? "positive" : ""}`}>
                     {formatAmount(transaction.amount)}
                   </span>
                   <ChevronDown className="history-entry-chevron" size={17} aria-hidden="true" />

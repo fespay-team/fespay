@@ -22,6 +22,7 @@ import { QRCodeSVG } from "qrcode.react";
 import ChargeFlow, { type ChargeOutcome } from "./ChargeFlow";
 import HistoryView from "./HistoryView";
 import SendFlow, { type SendReceipt } from "./SendFlow";
+import { formatYen as yen, parseStoredAmount, stringifyMoney } from "./money";
 import "./payment.css";
 import festivalStalls from "./assets/festival-stalls.png";
 import festivalFood from "./assets/festival-food.png";
@@ -32,7 +33,7 @@ type Transaction = {
   id: string;
   title: string;
   date: string;
-  amount: number;
+  amount: bigint;
   kind: "payment" | "charge" | "transfer_sent" | "transfer_received";
   charge?: ChargeOutcome;
   transfer?: {
@@ -45,14 +46,15 @@ type Transaction = {
 type DemoAccount = {
   id: string;
   name: string;
-  balance: number;
+  balance: bigint;
   transactions: Transaction[];
 };
 type DemoLedger = { activeAccountId: string; accounts: DemoAccount[] };
 
 const EVENT_NAME = "みどりの森まつり";
 const VERIFICATION_CODE = "4827";
-const LEDGER_STORAGE_KEY = "fespay-demo-ledger-v2";
+const LEDGER_STORAGE_KEY = "fespay-demo-ledger-v3";
+const PREVIOUS_LEDGER_STORAGE_KEY = "fespay-demo-ledger-v2";
 const LEGACY_LEDGER_STORAGE_KEY = "fespay-demo-ledger-v1";
 const DEMO_PAYMENT_QR_VALUE = "FESPAY-DEMO-PAYMENT-QR-NOT-VALID";
 
@@ -70,21 +72,21 @@ const initialTransactions: Transaction[] = [
     id: "sample-payment-1",
     title: "からあげ屋台",
     date: "10月9日 13:21",
-    amount: -850,
+    amount: -850n,
     kind: "payment",
   },
   {
     id: "sample-charge-1",
     title: "デモチャージ",
     date: "10月9日 12:05",
-    amount: 3000,
+    amount: 3000n,
     kind: "charge",
   },
   {
     id: "sample-payment-2",
     title: "青空ドリンク",
     date: "10月9日 11:38",
-    amount: -500,
+    amount: -500n,
     kind: "payment",
   },
 ];
@@ -92,75 +94,150 @@ const initialTransactions: Transaction[] = [
 const initialLedger: DemoLedger = {
   activeAccountId: "001",
   accounts: [
-    { id: "001", name: "デモ来場者", balance: 12800, transactions: initialTransactions },
-    { id: "002", name: "佐藤 はな", balance: 3200, transactions: [] },
-    { id: "003", name: "田中 そうた", balance: 7600, transactions: [] },
-    { id: "004", name: "山本 りん", balance: 1400, transactions: [] },
+    { id: "001", name: "デモ来場者", balance: 12800n, transactions: initialTransactions },
+    { id: "002", name: "佐藤 はな", balance: 3200n, transactions: [] },
+    { id: "003", name: "田中 そうた", balance: 7600n, transactions: [] },
+    { id: "004", name: "山本 りん", balance: 1400n, transactions: [] },
   ],
 };
 
-function isValidTransaction(transaction: Transaction): boolean {
-  return (
-    !!transaction &&
-    typeof transaction.id === "string" &&
-    typeof transaction.title === "string" &&
-    typeof transaction.date === "string" &&
-    Number.isSafeInteger(transaction.amount) &&
-    ((transaction.kind === "payment" && transaction.amount < 0) ||
-      (transaction.kind === "charge" && transaction.amount > 0) ||
-      (transaction.kind === "transfer_sent" && transaction.amount < 0) ||
-      (transaction.kind === "transfer_received" && transaction.amount > 0)) &&
-    (!transaction.transfer ||
-      (typeof transaction.transfer.counterpartyId === "string" &&
-        typeof transaction.transfer.counterpartyName === "string" &&
-        typeof transaction.transfer.message === "string" &&
-        typeof transaction.transfer.completedAt === "string"))
-  );
+function parseTransaction(value: unknown): Transaction | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const amount = parseStoredAmount(raw.amount);
+  const kind = raw.kind;
+  const outgoing = kind === "payment" || kind === "transfer_sent";
+  const incoming = kind === "charge" || kind === "transfer_received";
+  if (
+    typeof raw.id !== "string" ||
+    typeof raw.title !== "string" ||
+    typeof raw.date !== "string" ||
+    amount === null ||
+    (!outgoing && !incoming) ||
+    (outgoing && amount >= 0n) ||
+    (incoming && amount <= 0n)
+  ) return null;
+
+  let charge: ChargeOutcome | undefined;
+  if (raw.charge !== undefined) {
+    if (!raw.charge || typeof raw.charge !== "object") return null;
+    const item = raw.charge as Record<string, unknown>;
+    const chargeAmount = parseStoredAmount(item.amount);
+    const balanceAfter = parseStoredAmount(item.balanceAfter);
+    if (
+      typeof item.transactionId !== "string" ||
+      typeof item.completedAt !== "string" ||
+      typeof item.eventName !== "string" ||
+      typeof item.displayName !== "string" ||
+      typeof item.verificationCode !== "string" ||
+      chargeAmount === null || chargeAmount <= 0n ||
+      balanceAfter === null || balanceAfter < 0n
+    ) return null;
+    charge = {
+      transactionId: item.transactionId,
+      amount: chargeAmount,
+      completedAt: item.completedAt,
+      eventName: item.eventName,
+      displayName: item.displayName,
+      verificationCode: item.verificationCode,
+      balanceAfter,
+    };
+  }
+
+  let transfer: Transaction["transfer"];
+  if (raw.transfer !== undefined) {
+    if (!raw.transfer || typeof raw.transfer !== "object") return null;
+    const item = raw.transfer as Record<string, unknown>;
+    if (
+      typeof item.counterpartyId !== "string" ||
+      typeof item.counterpartyName !== "string" ||
+      typeof item.message !== "string" ||
+      typeof item.completedAt !== "string"
+    ) return null;
+    transfer = {
+      counterpartyId: item.counterpartyId,
+      counterpartyName: item.counterpartyName,
+      message: item.message,
+      completedAt: item.completedAt,
+    };
+  }
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    date: raw.date,
+    amount,
+    kind,
+    ...(charge ? { charge } : {}),
+    ...(transfer ? { transfer } : {}),
+  };
+}
+
+function parseTransactions(value: unknown): Transaction[] | null {
+  if (!Array.isArray(value)) return null;
+  const transactions: Transaction[] = [];
+  for (const item of value) {
+    const transaction = parseTransaction(item);
+    if (!transaction) return null;
+    transactions.push(transaction);
+  }
+  return transactions;
+}
+
+function parseDemoLedger(value: unknown): DemoLedger | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.activeAccountId !== "string" ||
+    !Array.isArray(raw.accounts) ||
+    raw.accounts.length !== initialLedger.accounts.length
+  ) return null;
+  const accounts: DemoAccount[] = [];
+  for (const [index, value] of raw.accounts.entries()) {
+    if (!value || typeof value !== "object") return null;
+    const item = value as Record<string, unknown>;
+    const balance = parseStoredAmount(item.balance);
+    const transactions = parseTransactions(item.transactions);
+    if (
+      item.id !== initialLedger.accounts[index].id ||
+      item.name !== initialLedger.accounts[index].name ||
+      balance === null || balance < 0n || !transactions
+    ) return null;
+    accounts.push({ id: item.id, name: item.name, balance, transactions });
+  }
+  if (!accounts.some((account) => account.id === raw.activeAccountId)) return null;
+  return { activeAccountId: raw.activeAccountId, accounts };
 }
 
 function loadDemoLedger(): DemoLedger {
   try {
-    const stored = window.localStorage.getItem(LEDGER_STORAGE_KEY);
-    if (stored) {
-      const parsed: unknown = JSON.parse(stored);
-      if (parsed && typeof parsed === "object") {
-        const ledger = parsed as Partial<DemoLedger>;
-        if (
-          Array.isArray(ledger.accounts) &&
-          ledger.accounts.length === initialLedger.accounts.length &&
-          ledger.accounts.every(
-            (account, index) =>
-              account?.id === initialLedger.accounts[index].id &&
-              account.name === initialLedger.accounts[index].name &&
-              Number.isSafeInteger(account.balance) &&
-              account.balance >= 0 &&
-              Array.isArray(account.transactions) &&
-              account.transactions.every(isValidTransaction),
-          ) &&
-          ledger.accounts.some((account) => account.id === ledger.activeAccountId)
-        )
-          return ledger as DemoLedger;
+    for (const key of [LEDGER_STORAGE_KEY, PREVIOUS_LEDGER_STORAGE_KEY]) {
+      const stored = window.localStorage.getItem(key);
+      if (!stored) continue;
+      try {
+        const ledger = parseDemoLedger(JSON.parse(stored));
+        if (ledger) return ledger;
+      } catch {
+        // Try the previous stored version.
       }
     }
     const legacyStored = window.localStorage.getItem(LEGACY_LEDGER_STORAGE_KEY);
     if (legacyStored) {
       const legacy: unknown = JSON.parse(legacyStored);
       if (legacy && typeof legacy === "object") {
-        const oldLedger = legacy as { balance?: number; transactions?: Transaction[] };
-        if (
-          Number.isSafeInteger(oldLedger.balance) &&
-          (oldLedger.balance ?? -1) >= 0 &&
-          Array.isArray(oldLedger.transactions) &&
-          oldLedger.transactions.every(isValidTransaction)
-        )
+        const raw = legacy as Record<string, unknown>;
+        const balance = parseStoredAmount(raw.balance);
+        const transactions = parseTransactions(raw.transactions);
+        if (balance !== null && balance >= 0n && transactions) {
           return {
             ...initialLedger,
             accounts: initialLedger.accounts.map((account) =>
               account.id === "001"
-                ? { ...account, balance: oldLedger.balance!, transactions: oldLedger.transactions! }
+                ? { ...account, balance, transactions }
                 : account,
             ),
           };
+        }
       }
     }
   } catch {
@@ -168,8 +245,6 @@ function loadDemoLedger(): DemoLedger {
   }
   return initialLedger;
 }
-
-const yen = (amount: number) => `¥${Math.abs(amount).toLocaleString("ja-JP")}`;
 
 function FesPayMark({ className = "" }: { className?: string }) {
   return (
@@ -259,12 +334,10 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
       </span>
       <strong
         className={
-          transaction.amount > 0
-            ? "transaction-amount positive"
-            : "transaction-amount"
+          `transaction-amount${transaction.amount > 0n ? " positive" : ""}${transaction.amount.toString().replace("-", "").length >= 13 ? " is-long" : ""}`
         }
       >
-        {transaction.amount > 0 ? "+" : "−"} {yen(transaction.amount)}
+        {transaction.amount > 0n ? "+" : "−"} {yen(transaction.amount)}
       </strong>
     </div>
   );
@@ -287,7 +360,7 @@ function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(LEDGER_STORAGE_KEY, JSON.stringify(ledger));
+      window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(ledger));
     } catch {
       // The prototype still works for this session when browser storage is unavailable.
     }
@@ -375,7 +448,6 @@ function App() {
       )
         return current;
       const balanceAfter = account.balance + outcome.amount;
-      if (!Number.isSafeInteger(balanceAfter)) return current;
       const completedAt = new Date(outcome.completedAt);
       const charge: ChargeOutcome = { ...outcome, balanceAfter };
       return {
@@ -411,17 +483,15 @@ function App() {
 
   const completeTransfer = (
     recipientId: string,
-    amount: number,
+    amount: bigint,
     message: string,
   ): SendReceipt | null => {
     const recipient = ledger.accounts.find((account) => account.id === recipientId);
     if (
       !recipient ||
       recipient.id === activeAccount.id ||
-      !Number.isSafeInteger(amount) ||
-      amount <= 0 ||
+      amount <= 0n ||
       amount > balance ||
-      !Number.isSafeInteger(recipient.balance + amount) ||
       message.length > 50
     )
       return null;

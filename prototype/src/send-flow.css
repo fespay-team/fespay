@@ -295,6 +295,7 @@
 .send-flow__balance-card {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 22px;
   padding: 14px;
@@ -307,9 +308,13 @@
 }
 
 .send-flow__balance-card strong {
+  min-width: 0;
+  max-width: 100%;
   margin-left: auto;
   color: #20598e;
   font: 900 16px Arial, sans-serif;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .send-flow__selected-person,
@@ -389,12 +394,21 @@
 
 .send-flow__amount-meta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   margin: 8px 2px 0;
   color: #7d94ad;
   font-size: 11px;
   font-weight: 750;
+}
+
+.send-flow__amount-meta span:last-child {
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .send-flow__field-error {
@@ -463,8 +477,11 @@
 
 .send-flow__review-amount strong,
 .send-flow__receipt-amount strong {
+  max-width: 100%;
   color: #155688;
   font: 900 clamp(32px, 10vw, 43px) Arial, sans-serif;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .send-flow__review-details {

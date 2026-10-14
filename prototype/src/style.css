@@ -855,6 +855,13 @@ button:focus-visible {
 .transaction-amount.positive {
   color: #168ea6;
 }
+.transaction-amount.is-long {
+  min-width: 0;
+  flex: 0 1 48%;
+  overflow-wrap: anywhere;
+  text-align: right;
+  white-space: normal;
+}
 .bottom-nav {
   position: fixed;
   z-index: 20;
@@ -1078,6 +1085,7 @@ button:focus-visible {
 .demo-account-copy small {
   color: #8ca0bc;
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 .account-links {
   padding: 0 14px;
