@@ -1,6 +1,6 @@
 # APIとDBの対応
 
-状態：設計採択済み（2026-10-13、PR #9）。基準：API PR #8、`120efcdc652d687534d2ced955625d6ac39147ee`（v0.4、171操作）。[OpenAPI正本候補](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/openapi.yaml)・[DB接点](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/db-handoff.md)を参照。以下の対応は保存責務と原子的処理の設計で、handler実装の完成証明ではない。
+状態：設計採択済み（2026-10-13、PR #9）。基準：API PR #8、`120efcdc652d687534d2ced955625d6ac39147ee`（v0.4、171操作）。[採択済みOpenAPI正本](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/openapi.yaml)・[DB接点](https://github.com/fespay-team/fespay/blob/120efcdc652d687534d2ced955625d6ac39147ee/docs/design/api/db-handoff.md)を参照。以下の対応は保存責務と原子的処理の設計で、handler実装の完成証明ではない。
 
 ## 領域横断の契約
 

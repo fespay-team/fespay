@@ -43,7 +43,7 @@ FEはauth/context、未完了ログインchallenge、明示再発行、元キー
 
 ## 参照
 
-Better Authは[Cookie名/属性のカスタマイズ](https://better-auth.com/docs/concepts/cookies)を提供する。[2FAの公式資料](https://better-auth.com/docs/plugins/2fa)はpasswordless登録の明示設定と、OAuthログインが既定ではcredentialログインと同じ2FA制限を受けないことを説明している。このため業務側のMFA検証を必須にする。Googleの[OpenID Connect資料](https://developers.google.com/identity/openid-connect/openid-connect)に従いsubを識別子に用い、署名/iss/aud/exp/nonce等を検証する。これらは2026-10-09確認で、具体版を固定した統合試験は未実施。
+Better Authは[Cookie名/属性のカスタマイズ](https://better-auth.com/docs/concepts/cookies)を提供する。[2FAの公式資料](https://better-auth.com/docs/plugins/2fa)はpasswordless登録の明示設定と、OAuthログインが既定ではcredentialログインと同じ2FA制限を受けないことを説明している。このため業務側のMFA検証を必須にする。Googleの[OpenID Connect資料](https://developers.google.com/identity/openid-connect/openid-connect)に従いsubを識別子に用い、署名/iss/aud/exp/nonce等を検証する。参照資料の確認日は2026-10-09。固定版Better Auth 1.7.7はADR-0005 / PR #15で採択し、PR #19/#23でsession/CSRF/identityの部分統合を確認済み。実Google/OAuth challenge・MFA全体の統合は未完了。
 
 承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
 
