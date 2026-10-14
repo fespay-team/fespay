@@ -1,6 +1,9 @@
 import { useLayoutEffect, useRef } from "react";
 
-type FittedBalanceProps = { className?: string; value: string };
+type FittedBalanceProps = {
+  className?: string;
+  value: string;
+};
 
 export default function FittedBalance({ className, value }: FittedBalanceProps) {
   const amountRef = useRef<HTMLElement>(null);
@@ -10,28 +13,62 @@ export default function FittedBalance({ className, value }: FittedBalanceProps) 
     const container = amount?.parentElement;
     if (!amount || !container) return;
 
+    // Keep the CSS-sized copy out of layout so measuring never enlarges the
+    // visible balance or changes the observed container's height.
+    const measure = amount.cloneNode(true) as HTMLElement;
+    measure.setAttribute("aria-hidden", "true");
+    measure.style.position = "absolute";
+    measure.style.visibility = "hidden";
+    measure.style.pointerEvents = "none";
+    measure.style.width = "max-content";
+    measure.style.maxWidth = "none";
+    measure.style.whiteSpace = "nowrap";
+    measure.style.fontSize = "";
+    container.appendChild(measure);
+
     const fit = () => {
-      amount.style.fontSize = "";
-      const baseSize = Number.parseFloat(window.getComputedStyle(amount).fontSize);
+      const baseSize = Number.parseFloat(window.getComputedStyle(measure).fontSize);
       const textRange = document.createRange();
-      textRange.selectNodeContents(amount);
+      textRange.selectNodeContents(measure);
       const textWidth = textRange.getBoundingClientRect().width;
       const containerStyle = window.getComputedStyle(container);
-      const rightEdge = container.getBoundingClientRect().right -
+      const rightEdge =
+        container.getBoundingClientRect().right -
         Number.parseFloat(containerStyle.paddingRight || "0");
       const availableWidth = rightEdge - amount.getBoundingClientRect().left - 2;
-      if (textWidth > availableWidth && availableWidth > 0) {
-        amount.style.fontSize = `${(baseSize * availableWidth) / textWidth}px`;
-      }
+
+      if (textWidth <= 0 || availableWidth <= 0) return;
+      const fontSize =
+        textWidth > availableWidth
+          ? `${((baseSize * availableWidth) / textWidth).toFixed(3)}px`
+          : "";
+      if (amount.style.fontSize !== fontSize) amount.style.fontSize = fontSize;
     };
 
     fit();
-    const observer = new ResizeObserver(fit);
+    let observedWidth = container.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const width = container.getBoundingClientRect().width;
+      if (Math.abs(width - observedWidth) < 0.1) return;
+      observedWidth = width;
+      fit();
+    });
     observer.observe(container);
     let active = true;
-    document.fonts.ready.then(() => { if (active) fit(); });
-    return () => { active = false; observer.disconnect(); };
+    document.fonts.ready.then(() => {
+      if (active) fit();
+    });
+
+    return () => {
+      active = false;
+      observer.disconnect();
+      measure.remove();
+    };
   }, [className, value]);
 
-  return <strong ref={amountRef} className={className}>{value}</strong>;
+  return (
+    <strong ref={amountRef} className={className}>
+      {value}
+    </strong>
+  );
 }
