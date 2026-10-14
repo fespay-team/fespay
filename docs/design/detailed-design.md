@@ -7,17 +7,17 @@
 | 文書ID | EPP-DES-002 |
 | 文書名 | FesPay 詳細設計書 |
 | 対象システム | FesPay |
-| 対象基本設計書 | [EPP-DES-001](basic-design.md)（設計v0.2、レビュー案） |
+| 対象基本設計書 | [EPP-DES-001](basic-design.md)（設計v0.2、採択済みの設計基準） |
 | 対象要件書 | [EPP-REQ-001](../requirements/event_payment_requirements.md)（現行v0.2、CR-0001承認済み） |
 | 版 | 0.2 |
 | 作成日 | 2026-10-01 |
-| ステータス | API/DB採択内容の参照同期（実装受入は別工程） |
-| 担当 | 未割当 |
-| レビュー者 | 未割当 |
-| 更新日 | 2026-10-07 |
+| ステータス | 設計採択済み（PR #6、API/DBの具体化はPR #8/#9。実装受入は別工程） |
+| 現行記録・保守担当 | natuki53（PR #17で担当割当済み） |
+| 承認記録 | KawataKenshirou・popoten0630-dev（PR #6、5a726ef）。API/DBの対象headは[採択記録](../project/design-status.md) |
+| 更新日 | 2026-10-14（記録同期。仕様変更なし） |
 | 目的 | 確定仕様と明示した詳細設計上の補完を分け、実装の境界・永続化・処理規約を定める |
 
-対象は基本設計の初期対象に限る。初期対象外機能は実装しない。実金銭運用可能、法令適合、性能達成、セキュリティ監査済みを示す文書ではない。基本設計がレビュー案であり、本書もその承認状態を引き継ぐ。
+対象は基本設計の初期対象に限る。初期対象外機能は実装しない。実金銭運用可能、法令適合、性能達成、セキュリティ監査済みを示す文書ではない。PR #6の最終headで詳細設計を採択済み。API/DBの具体化はPR #8/#9で採択した。[採択・進捗記録](../project/design-status.md)で対象headと残る実装/受入を区別する。
 
 ## 2. 設計方針
 
@@ -82,7 +82,7 @@ packages/infrastructure/src/{postgres,storage,mail,auth,observability}
 database/{migrations,seeds}
 ```
 
-すべて**詳細設計上の補完**。FEはcontracts以外のserver内部モジュールに依存しない。domainはapplication/infrastructure/httpに依存しない。applicationはdomainとportに依存し、infrastructureがportを実装する。モジュラーモノリスを維持し、モジュール間の書込みはapplication use case経由とする。DB migrationはレビュー済みの順方向変更を基本とし、成立取引の削除・書換えをするrollbackを作らない。workspace/パッケージ管理の準備案は[開発計画](../project/development-plan.md)とADR-0005で管理する。
+すべて**詳細設計上の補完**。FEはcontracts以外のserver内部モジュールに依存しない。domainはapplication/infrastructure/httpに依存しない。applicationはdomainとportに依存し、infrastructureがportを実装する。モジュラーモノリスを維持し、モジュール間の書込みはapplication use case経由とする。DB migrationはレビュー済みの順方向変更を基本とし、成立取引の削除・書換えをするrollbackを作らない。workspace/パッケージ管理の採択済み記録は[開発計画](../project/development-plan.md)とADR-0005で管理する。
 
 ## 5. 認証詳細設計
 
@@ -616,16 +616,16 @@ sequenceDiagram
 
 ## 23. 未決事項・採択後の実装確認
 
-本表は基本設計35章U-01～U-17を引き継ぎ、本詳細設計で露呈した不足を追加する。推奨は案であり、決定扱いではない。
+本表は基本設計35章U-01～U-17を引き継ぎ、本詳細設計で露呈した不足を追加する。推奨は案であり、決定扱いではない。全項目の決定窓口はnatuki53で、責任者・期限・依存・完了証拠の正本は[決定管理表](../team/decisions.md)。外部主催者/法務の合意や実証は担当割当だけで完了にしない。
 
 | ID/項目 | 根拠・現状/決める理由 | 候補・推奨 | 影響・変更時注意 |
 |---|---|---|---|
 | U-01 法的発行主体/法令該当性 | 基本設計未決。資金流れ・上限なし・譲渡・現金払戻しの評価必要 | 法務/関係機関確認を推奨 | 実金銭公開gate、wallet/transfer/cash |
-| U-02 運営責任者/終了後窓口 | 未割当 | 主催者・プラットフォーム責任境界を公開前に決定 | 問合せ/保存・公開gate |
+| U-02 運営責任者/終了後窓口 | 決定窓口natuki53。外部主催者との責任/窓口合意は未完了 | 主催者・プラットフォーム責任境界を公開前に決定 | 問合せ/保存・公開gate |
 | U-03 OpenAPI、Cookie、OAuth callback | PR #8 / ADR-0003で設計採択、実認証統合はIssue #13 | OpenAPI YAMLを正本化し本文重複を避ける（推奨） | UI/API契約 |
 | U-04 物理ER、UUID、分離レベル、勘定科目 | PR #9で保存モデル/勘定採択。UUID生成・実handler分離/性能はIssue #14 | PostgreSQL実機でDDL/競合試験し決定 | 全DB、金銭移行に注意 |
 | U-05 クラウド/リージョン/鍵/監視 | 未選定 | 要件RPO/RTOと契約を満たす構成を評価 | ARC/OPS |
-| U-06 package/runtime/lockfile | 実版未確定 | 対応期限までにADRとlockfile固定 | build・脆弱性更新 |
+| U-06 package/runtime/lockfile | PR #15 / ADR-0005で固定・採択済み | 選定完了。依存更新は別PR | build・脆弱性更新 |
 | U-07 Google/メール配送 | 未契約 | 開発/本番分離し実機確認 | auth/通知 |
 | U-08 QR端末/カメラ/公開cache | 実機未評価 | 複数端末・共用回線で評価 | QR/公開導線 |
 | U-09 WCAG/320px評価 | 未実施 | 実機・支援技術評価 | UI |
@@ -634,11 +634,11 @@ sequenceDiagram
 | U-12 保存期間の法務確認 | 基準は基本設計採用済み | 現基準を維持し、変更は要件変更で扱う | PRV/削除 |
 | U-13 招待/全認証喪失窓口 | 未決 | 本人確認窓口・手順を運営決定 | account recovery |
 | U-14 object storage/暗号化/期限削除 | 未選定 | private bucket・削除検証を推奨 | 画像/CSV |
-| U-15 最終HTTP error mapping/UI文言 | 未確定 | OpenAPIと文言表で固定 | clients |
+| U-15 最終HTTP error mapping/UI文言 | HTTP契約はPR #8採択済み、実画面適用は未完了 | Issue #13/#14で文言・復帰を検証 | clients |
 | U-16 現金実査/差異解消手順 | 運用責任未決 | 模擬運営後に手順確定 | 現金照合 |
 | U-17 表示注文番号/照合番号 | 詳細未決 | 推測困難性と現場読み上げ性を評価 | 受取・問い合わせ |
 | U-18 Membership/Shop/Register列挙、状態履歴 | API #8 / DB #9で語彙/変換を採択、実状態遷移はIssue #14 | 有効/停止等の状態機械を要件照合後にDDL化 | 6,7,10章。勝手なenum確定不可 |
-| U-19 token長/正確な乱数仕様、CSV signed URL TTL | QR強度・TTL未決 | 脅威評価と事業者仕様確認で決める | QR/ストレージ。URL公開漏えいを防ぐ |
+| U-19 token長/正確な乱数仕様、CSV signed URL TTL | QR強度・契約TTLはPR #8採択済み。実生成/単回消費/事業者URL期限は未実証 | Issue #13/#14、決定管理表の証跡を確認 | QR/ストレージ。URL公開漏えいを防ぐ |
 | U-20 PostgreSQL trigger実装/台帳勘定体系 | PR #9で設計/制約104件を採択。運用昇格・復旧・負荷はIssue #14 | migration・復元・並行Txで実証 | 台帳正本、後方互換注意 |
 
 ## 24. 詳細設計で補完した事項

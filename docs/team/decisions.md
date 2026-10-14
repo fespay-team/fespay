@@ -4,11 +4,11 @@
 
 「完了」は根拠がある採択事項だけに付ける。担当・期限の割当はIssue #12の成果物で、残る実証はIssue #13/#14で管理する。法務/運営/公開の判断は開発実装と別の証跡にする。
 
-| ID | 判断/確認事項 | 担当・決定窓口 | 期限 | 根拠/完了証拠 | 依存Issue/PR |
+| ID | 判断/確認事項 | 担当・決定窓口 | 期限 | 根拠/完了証拠 | 依存Issue/PR（完了した子は証跡参照） |
 | --- | --- | --- | --- | --- | --- |
 | U-01 | 法的発行主体/法令該当性 | natuki53 | 実金銭公開前 | 外部確認・責任主体・G1証跡。法令適合を開発者判断だけで認定しない | #14 |
 | U-02 | 運営責任/終了後窓口 | natuki53 | 実金銭公開前 | プラットフォームとイベント主催者の責任/費用/終了後窓口の合意・G2 | #14 |
-| U-03 | OpenAPI/Cookie/OAuth | natuki53 | 認証実装PRの承認前 | API設計は#8で採択済み。実Origin/CSRF/Google・Cookieの統合証跡 | #13 / #16 |
+| U-03 | OpenAPI/Cookie/OAuth | natuki53 | 認証実装PRの承認前 | API設計は#8で採択済み。実Origin/CSRF/Google・Cookieの統合証跡 | #13 / #16 / #21（子は完了、認証全体は未完了） |
 | U-04 | 物理ER/UUID/分離/勘定 | natuki53 | 金銭実装PR・運用migration承認前 | 保存モデル/勘定は#9で採択。UUID生成・実handler分離/競合を検証 | #14 |
 | U-05 | クラウド/リージョン/鍵/監視 | natuki53 | ステージング構築前 | 費用・鍵/監視・RPO/RTOを満たす構成と環境台帳 | #14 |
 | U-06 | package/runtime/lockfile | natuki53 | 完了：PR #15のマージ | Node24/npm11/exact依存/lockfile/3OS CIを採択。更新時は別PR | #11 / #15 |
@@ -28,3 +28,5 @@
 | U-20 | trigger/台帳勘定 | natuki53 | 運用migration承認前 | #9の制約104件を基準に、実handler/並行Tx/移行復元/負荷を検証 | #14 |
 
 詳細条件は[現行要件](../requirements/event_payment_requirements.md)、[詳細設計23章](../design/detailed-design.md)、[開発計画](../project/development-plan.md)を参照する。公開条件G1～G5はこの割当で完了へ変更しない。
+
+担当割当Issue #12はPR #17で完了。部分実装と採択の履歴は[共通記録](../project/design-status.md)。U-06の固定runtime以外にも採択済みの契約部分はあるが、各行が求める実証・外部確認までを完了したとは扱わない。
