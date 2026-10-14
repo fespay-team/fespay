@@ -17,13 +17,13 @@ test('isolated PostgreSQL migrations and fixed Better Auth adapter', { timeout: 
   try {
     await t.test('status before first apply is pending without creating schema', async () => {
       const state = await applyDevelopmentMigrations(db.adminUrl, '', true, true);
-      assert.deepEqual(state.map(row => row.status), ['pending', 'pending']);
+      assert.deepEqual(state.map(row => row.status), ['pending', 'pending', 'pending']);
       assert.equal((await owner.query("SELECT to_regclass('fespay_meta.migrations') AS relation")).rows[0].relation, null);
     });
-    await t.test('first apply and simultaneous repeats preserve exactly two migrations', async () => {
+    await t.test('first apply and simultaneous repeats preserve exactly three migrations', async () => {
       await applyDevelopmentMigrations(db.adminUrl, db.appPassword, true);
       await Promise.all([applyDevelopmentMigrations(db.adminUrl, db.appPassword, true), applyDevelopmentMigrations(db.adminUrl, db.appPassword, true)]);
-      assert.equal(Number((await owner.query('SELECT count(*) FROM fespay_meta.migrations')).rows[0].count), 2);
+      assert.equal(Number((await owner.query('SELECT count(*) FROM fespay_meta.migrations')).rows[0].count), 3);
       assert.equal(Number((await owner.query("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")).rows[0].count), 55);
       assert.equal(Number((await owner.query("SELECT count(*) FROM information_schema.tables WHERE table_schema='auth'")).rows[0].count), 5);
     });

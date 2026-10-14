@@ -4,6 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { Config } from './config.js';
 import type { createAuth } from './auth.js';
 import { ApiError, readJson } from './http-input.js';
+import { listIdentities } from './identity-list.js';
 import {
   cookie,
   csrf,
@@ -364,6 +365,16 @@ export function createSessionApi(config: Config, auth: ReturnType<typeof createA
         },
         [sessionCookie(c.req.raw.headers, actor)],
       );
+    });
+    if (!result) throw unauthorized();
+    return result;
+  });
+  router.get('/v1/auth/identities', async (c) => {
+    const result = await withActor(c.req.raw.headers, async (client, actor) => {
+      query(c.req.raw, []);
+      return response(await listIdentities(client, actor.userId, actor.now), [
+        sessionCookie(c.req.raw.headers, actor),
+      ]);
     });
     if (!result) throw unauthorized();
     return result;

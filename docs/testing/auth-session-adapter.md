@@ -1,7 +1,7 @@
 # 認証文脈と本人セッションAPIの実装・検証
 
-状態：Issue [#16](https://github.com/fespay-team/fespay/issues/16)の実装レビュー待ち。親Issue [#13](https://github.com/fespay-team/fespay/issues/13)の一部。担当natuki53。
-基準はPR #8のOpenAPIとPR #9の業務schema、PR #15で固定したBetter Auth 1.7.7。API/DB設計原文とmigrationは変更していない。
+状態：Issue [#16](https://github.com/fespay-team/fespay/issues/16)はPR #19で承認・マージ済み（2026-10-14、popoten0630-dev、309703c）。親Issue [#13](https://github.com/fespay-team/fespay/issues/13)の一部。担当natuki53。
+基準はPR #8のOpenAPIとPR #9の業務schema、PR #15で固定したBetter Auth 1.7.7。PR #19ではAPI/DB設計原文とmigrationを変更していない。後続の[認証手段一覧](auth-identity-list.md)は別の実装・追記migrationとして管理する。
 
 ## 公開範囲
 

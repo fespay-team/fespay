@@ -8,6 +8,8 @@
 | --- | --- | --- |
 | API / ADR-0002～0004 | marron46、2026-10-13、52ef2d4 | [PR #8](https://github.com/fespay-team/fespay/pull/8)、120efcdc652d687534d2ced955625d6ac39147ee |
 | DB / 台帳 / 保存モデル | marron46・popoten0630-dev、2026-10-13、8fe36cc | [PR #9](https://github.com/fespay-team/fespay/pull/9)、9d54a2bba1f2896a492dc7374ecc64e58d232db4 |
+| 担当 / 未決事項の決定管理 | popoten0630-dev、2026-10-14、7dc1858 | [PR #17](https://github.com/fespay-team/fespay/pull/17)、7e1055a2c1ef666cd81607d66e70083fb5fc385e |
+| 認証文脈 / 本人セッションAPI | popoten0630-dev、2026-10-14、cf08525 | [PR #19](https://github.com/fespay-team/fespay/pull/19)、309703c37ac175f2b64bea5df7456fc44487fd01 |
 
 GitHubアカウントからFE/BEの役割を推定しない。設計採択、実装準備案、実装受入合格を区別する。OpenAPIの0.4.0-draftは採択した原文の版名として保持する。
 
@@ -24,8 +26,8 @@ GitHubアカウントからFE/BEの役割を推定しない。設計採択、実
 
 ## 着手順
 
-1. #11をレビューし、各OSで起動・検証できる基盤を共有する。
-2. #12で担当・期限を決め、#13の認証アダプターを先行する。
+1. #11の開発基盤と#12の担当・期限は承認・マージ済み。
+2. #13の認証アダプターを先行する。#16の文脈/session APIはマージ済み、次は[#21 本人の認証手段一覧](https://github.com/fespay-team/fespay/issues/21)。公開登録/login・追加/解除・実メール/Google・MFA/退会・実ブラウザーの受入は残る。
 3. #14をチャージ、決済、譲渡、払戻し/返金、訂正、注文/在庫、配信へ分割する。台帳・残高・監査・Outboxを同一Txへ含める。
 4. 運用migration昇格、復旧/性能/実機・公開gateを実施する。
 
