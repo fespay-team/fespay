@@ -589,17 +589,19 @@ function App() {
             <X size={23} strokeWidth={2.2} />
           </button>
         )}
-        <button
-          className="brand"
-          type="button"
-          onClick={goHome}
-          aria-label="FesPay ホーム"
-        >
-          <FesPayMark className="brand-mark" />
-          <span className="brand-copy">
-            <strong>fespay</strong>
-          </span>
-        </button>
+        {activeTab !== "pay" && (
+          <button
+            className="brand"
+            type="button"
+            onClick={goHome}
+            aria-label="FesPay ホーム"
+          >
+            <FesPayMark className="brand-mark" />
+            <span className="brand-copy">
+              <strong>fespay</strong>
+            </span>
+          </button>
+        )}
         {activeTab !== "pay" && (
           <div className="topbar-actions">
             <button
@@ -869,22 +871,11 @@ function App() {
 
       {activeTab === "pay" && (
         <main className="payment-content">
-          <div className="payment-heading">
-            <span className="payment-eyebrow">
-              <ScanLine size={15} /> FESPAY PAYMENT
-            </span>
-            <h1>支払い</h1>
-            <p>お店のスタッフに、このQRを見せてください。</p>
-          </div>
           <section className="payment-qr-panel" aria-labelledby="payment-qr-heading">
             <div className="payment-qr-panel-top">
-              <span className="payment-brand">
-                <FesPayMark /> fespay
-              </span>
+              <h1 id="payment-qr-heading">支払い用QR</h1>
               <span className="payment-demo-tag">DEMO</span>
             </div>
-            <h2 id="payment-qr-heading">支払い用QR</h2>
-            <p>読み取りやすいように画面を明るくしてください</p>
             <div
               className="payment-qr-art"
               role="img"
@@ -899,7 +890,8 @@ function App() {
                 fgColor="#17234c"
               />
             </div>
-            <span className="payment-qr-caption">お店のスタッフに提示してください</span>
+            <p>お店のスタッフに、このQRを見せてください。</p>
+            <span className="payment-qr-caption">読み取りやすいように画面を明るくしてください</span>
           </section>
           <section className={`payment-balance${balanceSizeClass ? " is-expanded" : ""}`} aria-label="現在の残高">
             <span>
