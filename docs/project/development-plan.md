@@ -1,6 +1,6 @@
 # 設計採択後の開発計画
 
-更新日：2026-10-13。準備担当：natuki53（ユーザー指定）。実装担当の個人割当は後で決める。
+更新日：2026-10-14。ユーザー指定によりFE・BE・DB・運用・準備はnatuki53が兼任する。作者以外のレビューはdevelopersチームへ依頼する。
 
 ## 採択記録
 
@@ -16,9 +16,9 @@ GitHubアカウントからFE/BEの役割を推定しない。設計採択、実
 | Issue | 完了条件 | 担当 |
 | --- | --- | --- |
 | [#11 開発基盤](https://github.com/fespay-team/fespay/issues/11) | 承認記録同期、固定workspace、起動/型/build、開発migration、認証の隔離DB検証、CI、PRレビュー | natuki53 |
-| [#12 担当・未決割当](https://github.com/fespay-team/fespay/issues/12) | FE/BE/DB個人割当、相互レビュー、U-01～U-20の責任者・期限・依存 | 未割当、準備窓口natuki53 |
-| [#13 認証統合](https://github.com/fespay-team/fespay/issues/13) | /v1/authアダプター、業務MFA/CSRF/Origin、実メール/Google、因子/退会・失効の受入検証 | BE-2 / FE-1 / DB枠、個人は#12で決める |
-| [#14 業務・worker](https://github.com/fespay-team/fespay/issues/14) | 金銭・注文・在庫の小さな実装PR、並行/再送/切断、CSV/SSE、移行/性能/復旧 | BE-1 / BE-2 / FE / DB枠、個人は#12で決める |
+| [#12 担当・未決割当](https://github.com/fespay-team/fespay/issues/12) | FE/BE/DB個人割当、相互レビュー、U-01～U-20の責任者・期限・依存 | natuki53（兼任）、[決定管理表](../team/decisions.md) |
+| [#13 認証統合](https://github.com/fespay-team/fespay/issues/13) | /v1/authアダプター、業務MFA/CSRF/Origin、実メール/Google、因子/退会・失効の受入検証 | natuki53（BE-2 / FE-1 / DB兼任） |
+| [#14 業務・worker](https://github.com/fespay-team/fespay/issues/14) | 金銭・注文・在庫の小さな実装PR、並行/再送/切断、CSV/SSE、移行/性能/復旧 | natuki53（BE / FE / DB兼任） |
 
 未決事項を設計採択だけで消さない。U-03の公開契約、U-04/U-18/U-20の保存モデル/制約は採択済み。UUID生成方式・分離レベル/負荷・現金運用・worker保持値・クラウド/鍵・実機・法務/公開条件は責任者の決定・実証を残す。#12で実装着手前に割り当てる。基盤の準備案は[ADR-0005](../adr/0005-development-foundation.md)。
 
@@ -30,3 +30,5 @@ GitHubアカウントからFE/BEの役割を推定しない。設計採択、実
 4. 運用migration昇格、復旧/性能/実機・公開gateを実施する。
 
 DB制約104件、API契約378件/参照69件の検証をAT-001～070の実装受入へ読み替えない。運用DBや実金銭公開は今回の準備対象外。
+
+2026-10-14、[PR #15](https://github.com/fespay-team/fespay/pull/15)をKawataKenshirouの最終head承認後にマージし、Issue #11を完了。認証の最初の実装単位は[Issue #16](https://github.com/fespay-team/fespay/issues/16)。親#13/#14は残る全条件が揃うまでOPENとし、子Issueの部分完了だけで閉じない。
