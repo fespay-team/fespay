@@ -1,16 +1,19 @@
 # 設計書
 
-[基本設計書](basic-design.md)をEPP-DES-001の本文としてレビュー中です。基準は[安定パスの現行要件書](../requirements/event_payment_requirements.md)です。[CR-0001](../requirements/changes.md)で承認されたQR表示・関連付け後承認・見積・在庫予約の期限と安全な再試行条件を反映しています。
+基本・詳細設計、API・DBの主要設計は採択済みです。基準は[現行要件v0.2](../requirements/event_payment_requirements.md)と承認済み[CR-0001](../requirements/changes.md)。承認者・対象head・マージ日は[採択・進捗記録](../project/design-status.md)、現行担当は[担当表](../team/ownership.md)を参照してください。
 
-| 領域 | 入口 | 主担当の目安 |
+| 領域 | 入口 | 状態 / 担当 |
 | --- | --- | --- |
-| 基本設計全体 | [basic-design.md](basic-design.md) | 総合 |
-| 詳細設計全体（再レビュー待ち） | [detailed-design.md](detailed-design.md) | 総合＋BE＋FE |
-| 全体構成・境界 | [architecture](architecture/README.md) | 総合＋BE |
-| DB・台帳 | [database](database/README.md) | BE-1＋BE-2 |
-| API契約（PR #8で設計採択済み） | [api](api/README.md) | API：natuki53、レビュー：BE＋利用するFE |
-| 画面・導線 | [ui](ui/README.md) | FE-1＋FE-2 |
-| 業務状態・競合 | [flows](flows/README.md) | 各担当＋BE |
+| 基本設計全体 | [basic-design.md](basic-design.md) | PR #3/#6で設計基準採択、現行保守natuki53 |
+| 詳細設計全体 | [detailed-design.md](detailed-design.md) | PR #6で採択、API/DBの具体化は#8/#9、natuki53 |
+| 全体構成・境界 | [architecture](architecture/README.md) | 本文は基本/詳細設計とADR。分冊は未作成、natuki53 |
+| DB・台帳 | [database](database/README.md) | PR #9で採択済み、natuki53 |
+| API契約 | [api](api/README.md) | PR #8で採択済み、natuki53 |
+| 画面・導線 | [ui](ui/README.md) | 基本設計に一覧/遷移あり。プロトタイプのレビュー・詳細画面は残る、natuki53 |
+| 業務状態・競合 | [flows](flows/README.md) | 基本/詳細/APIで採択済みの処理境界あり。分冊は未作成、natuki53 |
 
-APIの仕様本文は [api/openapi.yaml](api/openapi.yaml) を正本とし、説明文でリクエスト定義を重複管理しません。現在は全58論理API IDを171 HTTP操作へ具体化した全領域の設計案です。認証・イベント/権限・チャージ/決済/譲渡・払戻し/返金・商品/注文・集計/CSVを含みます。DBを待たず[HTTP入力・互換性](api/common/http-contract.md)、[画面復帰](api/flows/client-flows.md)、[CSVの列・集計・配信](api/domains/csv-contract.md)も具体化しています。[対応表とレビュー残件](api/coverage.md)を参照してください。API #8 / DB #9は2026-10-13承認・マージ済み。実装・運用の残件は[開発計画](../project/development-plan.md)で管理します。
-DBの論理設計と将来のマイグレーションの対応を記録し、UI・API・DBで同じ要件IDを参照します。
+APIの正本は[openapi.yaml](api/openapi.yaml)、保存モデル・制約は[DB設計](database/README.md)。全58論理API IDを171操作へ具体化し、55業務表と対応付けています。[共通HTTP規約](api/common/http-contract.md)、[画面復帰](api/flows/client-flows.md)、[CSV契約](api/domains/csv-contract.md)、[網羅表](api/coverage.md)を参照してください。Markdownへ入力型やSQLの全文を重複管理しません。
+
+採択は設計の基準があることを示します。未決U-01～U-20の残る判断・実証は[決定管理表](../team/decisions.md)、公開条件は[工程](../project/README.md#公開前ゲート)。担当割当、部分実装、受入合格、公開可能をそれぞれ区別します。
+
+開発基盤と認証5経路はPR #15/#19/#23で部分実装済み。続く公開登録/login等は[Issue #13](https://github.com/fespay-team/fespay/issues/13)、金銭/注文/worker/運用は[Issue #14](https://github.com/fespay-team/fespay/issues/14)。今回の同期で新しい実装・受入合格を追加しません。

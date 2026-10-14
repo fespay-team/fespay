@@ -2,7 +2,7 @@
 
 学園祭・バザーなどのイベント内決済プラットフォーム。
 GitHub：[fespay-team/fespay](https://github.com/fespay-team/fespay)（public）。
-API/DB設計はPR #8/#9、開発基盤はPR #15で採択済み。[認証文脈・本人セッションAPI](docs/testing/auth-session-adapter.md)はPR #19でマージ済み。[本人の認証手段一覧](docs/testing/auth-identity-list.md)を実装レビュー中で、業務機能全体の実装受入は未実施です。
+API/DB設計はPR #8/#9、開発基盤はPR #15で採択済み。[認証文脈・本人セッションAPI](docs/testing/auth-session-adapter.md)はPR #19でマージ済み。[本人の認証手段一覧](docs/testing/auth-identity-list.md)もPR #23でマージ済みで、業務機能全体の実装受入は未実施です。
 
 起動・検証は[ローカル開発手順](docs/operations/development.md)、担当と後続Issueは[開発計画](docs/project/development-plan.md)を参照してください。
 
@@ -31,17 +31,20 @@ fespay/
 │   ├── project/            # 工程・公開前ゲート・発表資料の案内
 │   ├── team/               # GitHub設定・担当・チーム運用
 │   └── templates/          # 設計書・ADR・試験報告のひな形
-└── （コード用ディレクトリは実装開始時に作成）
+├── apps/                  # APIとWebの開発基盤・部分実装
+├── database/              # 開発専用migrationとmanifest
+├── scripts/               # 起動・設計検証
+├── compose.yaml           # ローカル開発DB
+└── package.json           # 固定npm workspace
 ```
 
-5人で要件・API・画面・DBを同時に変更できるよう、最初は1つのリポジトリで管理します。
-将来の `apps/web`、`apps/api`、`packages/contracts`、`tests`、`infra` の配置案は
-[構成の意思決定記録](docs/adr/0001-repository-structure.md)に記載しています。
+単一リポジトリで要件・API・画面・DBを管理します。現在は全担当枠をnatuki53が兼任し、作者以外のdevelopersがレビューします。初期の配置案と現在の対応は[ADR-0001](docs/adr/0001-repository-structure.md)、固定workspaceは採択済み[ADR-0005](docs/adr/0005-development-foundation.md)を参照してください。
 
 ## 現在の状態
 
 - 受領したEPP-REQ-001 v0.1を初期基準として[安定パスの現行要件書](docs/requirements/event_payment_requirements.md)を作成し、CR-0001を反映した現行v0.2を管理中。受領時点はGit履歴で保管する。
-- [基本設計書](docs/design/basic-design.md)はレビュー中。[詳細設計書](docs/design/detailed-design.md)はレビュー指摘修正案・再レビュー待ち。70件の受入試験の管理表を準備済み。
-- 設計・実装・受入試験は未完了。試験管理表の初期状態はすべて「未実施」。
+- [基本](docs/design/basic-design.md)・[詳細](docs/design/detailed-design.md)・API・DBの主要設計は採択済み。[採択・進捗記録](docs/project/design-status.md)に対象head・承認者・マージ記録を集約。
+- 開発基盤と認証5経路は部分実装済み。公開登録/login、実OAuth/MFA、金銭/注文/worker・画面/運用の実装・受入は残る。
+- [受入管理表](docs/testing/acceptance-status.md)の全70件は全条件の判定が未実施。部分検証の証跡と担当窓口を記録し、一式の合格へ読み替えない。
 - GitHub Organization とリモートリポジトリの設定状況は[設定記録](docs/team/github-setup.md)を参照。
 - 当面の公開方針は[権利留保（All rights reserved）](LICENSE)。OSSライセンスは採用せず、再利用・再配布の包括的な許諾は付与しません。将来のOSSライセンス採用はチームで決定します。
