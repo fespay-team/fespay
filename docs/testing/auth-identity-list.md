@@ -1,6 +1,6 @@
 # 本人の認証手段一覧API
 
-状態：Issue [#21](https://github.com/fespay-team/fespay/issues/21)の実装レビュー待ち。担当natuki53。親Issue #13の一部で、採択済みOpenAPIの `listMyIdentities` に対応する。
+状態：Issue [#21](https://github.com/fespay-team/fespay/issues/21)は[PR #23](https://github.com/fespay-team/fespay/pull/23)で承認・マージ済み（2026-10-14、marron46、対象aef930d、main 17a2186）。担当natuki53。親Issue #13の一部で、採択済みOpenAPIの `listMyIdentities` に対応する。
 
 ## 実装範囲
 

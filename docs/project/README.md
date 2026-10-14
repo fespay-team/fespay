@@ -2,12 +2,11 @@
 
 工程の基準は[現行要件書の第32章](../requirements/event_payment_requirements.md)です。
 2027-01-20の期限を含め、当初の工程記載は受領したv0.1から引き継いだもので、達成保証・工数見積もりではありません。受領時点はGit commit `a4a16f6c6e72a881fa8939c1819d745a6101c16c`から再現できます。
-日々のタスクはGitHub Issues、予定と担当はGitHub Projectsを使う運用案です。ボードは未作成です。
+日々のタスクはGitHub Issues、予定と担当はGitHub Projectsを使う運用案です。初期案ではボード未作成。2026-10-14の現状照会はread:project権限不足のため未確認で、この同期では未作成と断定しません。
 
 推奨するボードの状態：Backlog → Ready → In progress → In review → Done。
 Issueには担当ロールだけでなく実際の担当者、依存Issue、完了条件を記入します。
-最初の作業候補はOrganization整備、担当割当、画面遷移、論理ER、API契約、試験計画です。
-この一覧は実装を今すぐ開始する指示ではありません。
+主要設計・開発基盤・担当割当と認証5経路は採択/部分実装済み。[採択・進捗記録](design-status.md)で完了と残件を確認し、続く公開メール登録/loginはIssue #13、金銭/注文/worker/運用はIssue #14で管理します。画面プロトタイプは別PRのレビュー・統合を待ちます。
 
 ## 公開前ゲート
 

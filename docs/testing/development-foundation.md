@@ -1,6 +1,6 @@
 # 開発基盤の検証記録
 
-実施日：2026-10-13。対象：Issue #11、development-foundationの準備案。運用DB・実利用者データは使用しない。
+実施日：2026-10-13。対象：Issue #11、development-foundationの実装（PR #15時点の検証記録）。運用DB・実利用者データは使用しない。
 
 ## ローカル実施結果
 
@@ -18,6 +18,6 @@ macOS arm64、Node.js 24.7.0 / npm 11.5.1、PostgreSQL 16.12、Better Auth 1.7.7
 
 ## CIと受入境界
 
-[CI run 38375832365](https://github.com/fespay-team/fespay/actions/runs/38375832365)はce9bf809a9762ad55323ee0968bf36887bec98e7で全4job成功。最終headの結果はPRへ記録する。Linux/macOS/Windowsで型/build/基本試験、Linuxで設計/DB/auth統合を実行する。ワークフロー作成をCI成功の証拠にしない。
+[CI run 38375832365](https://github.com/fespay-team/fespay/actions/runs/38375832365)はce9bf809a9762ad55323ee0968bf36887bec98e7で全4job成功。最終head 3cbd03cの[run 38376441902](https://github.com/fespay-team/fespay/actions/runs/38376441902)も全4job成功し、KawataKenshirouの承認後にPR #15を2026-10-14に375b56dへマージ済み。Linux/macOS/Windowsで型/build/基本試験、Linuxで設計/DB/auth統合を実行する。ワークフロー作成をCI成功の証拠にしない。
 
-実メール配送・Google本人認証・TOTPの再利用/試行制限/回復コード、FesPayのCSRF・業務MFAアダプター、金銭/注文/在庫handler、実ブラウザー・実機/性能/復旧・運用migrationは未実施。Issue #12～14へ引き継ぎ、受入管理表を合格へ変更しない。
+PR #15時点では実メール/Google/TOTP・FesPayのCSRF/業務MFAアダプター・金銭/注文/在庫handler・実ブラウザー/性能/復旧/運用migrationは未実施だった。後続PR #19/#23で[session/CSRF](auth-session-adapter.md)と[認証手段一覧](auth-identity-list.md)の部分統合を実証済み。担当割当#12は完了、残る実装/受入は#13/#14。現在の通常8件/統合34件を、本報告の当時の4件/11件やAT全体の合格へ読み替えない。

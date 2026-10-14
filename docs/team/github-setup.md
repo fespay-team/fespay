@@ -2,16 +2,16 @@
 
 ## 現在の状態
 
-確認日：2026-09-14。
+確認日：2026-10-14。リポジトリ/チーム/ブランチ保護のGitHub APIとCODEOWNERS、PRの承認/CI記録を照合。
 
 - Organization：[fespay-team](https://github.com/fespay-team)。作成済み、GitHub Free。
 - リポジトリ：[fespay-team/fespay](https://github.com/fespay-team/fespay)。Public、既定ブランチ `main`。
 - ローカル：Gitを初期化し、`origin` を上記リポジトリに設定。文書一式をpush済み。
 - 設定：Issues有効、Wiki無効、Squash mergeのみ有効、マージ後の作業ブランチ自動削除。
 - 登録連絡先：ユーザー指定済み。実値は本書に記録しない。
-- チーム・メンバー招待：未設定。担当者のGitHubアカウントが確定したら割り当てる。
+- チーム：developersは存在し、このrepoへのWrite権限を確認。担当枠はPR #17でnatuki53へ割当済み。個々の招待の回答状況や全メンバー権限はこの同期で検証していない。
 - CODEOWNERS・ブランチ保護：公開化に合わせて有効化。CODEOWNERSはレビュー依頼先の自動選定に使い、`main` はPR作者以外による1名以上の承認を要求する。
-- CI：未導入。今回はドキュメントとリポジトリの準備まで。
+- CI：PR #15で導入済み。3OSのworkspaceとLinuxの設計/DB/認証を実行。PR #23マージ後main 17a2186の全4ジョブ成功（[run 38497451389](https://github.com/fespay-team/fespay/actions/runs/38497451389)）。必須status checkの設定は未指定（required_status_checks=null）。
 
 ## Organizationを使う理由
 
@@ -31,7 +31,7 @@ Organization作成では名称・連絡先・所有主体などを確認し、�
 | レビュー | 作者以外の最低1人。金銭・認証認可は別のBE担当 |
 | Issues | 有効。テンプレートを利用 |
 | Wiki | 無効。文書の正本は `docs/` |
-| Projects | 未作成。Backlog / Ready / In progress / In review / Doneを推奨 |
+| Projects | 初期案では未作成。現状はread:project権限不足で未確認。Backlog / Ready / In progress / In review / Doneを推奨 |
 
 ## 無料プランでの運用
 
@@ -40,13 +40,14 @@ Organization作成では名称・連絡先・所有主体などを確認し、�
 公開リポジトリのため閲覧やfork自体は制限できません。提案を受け付ける窓口としてIssuesとPull Requestsは有効にします。
 
 `main` はPR、作者以外による1名以上の承認、最新push者以外の承認、push後の古い承認の無効化、未解決会話の解消を要求し、force pushと削除を禁止します。CODEOWNERSはレビュー依頼を自動化しますが、PR作者が単独のCODEOWNERでも別のWrite権限メンバーの承認で進められるよう、CODEOWNER本人の承認は必須ゲートにしません。
-Rulesetにbypass actorはなく、管理者にも保護を適用します。CI必須化は該当チェックが実際に動いた後に行います。
+Rulesetにbypass actorはなく、管理者にも保護を適用します。CIは実際に稼働しているが、必須status check指定は未設定。チェック成功を確認してからマージする運用を維持し、この文書同期で保護設定を変更しない。
 
 ## 初期公開後に確認すること
 
-- [x] 作成先、private、default branchが正しい
+- [x] 作成先、Public、default branch=mainを確認
 - [x] 初期文書一式をpushし、リモートのmainへの反映を確認した
-- [ ] チームと実メンバーに適切な権限がある
+- [x] developersチームのrepo Writeと担当窓口を確認
+- [ ] 個々の招待回答・全メンバーの適切な権限を確認（この同期では未検証）
 - [ ] 新しい参加者がcloneして要件・設計文書を読める
 - [x] IssueとPRのテンプレートをリモートのmainに配置した
 - [x] プランで利用できる保護機能を確認し、有効・未設定を記録した

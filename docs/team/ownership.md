@@ -1,6 +1,6 @@
 # 担当・レビュー分担
 
-更新日：2026-10-14。[Issue #12](https://github.com/fespay-team/fespay/issues/12)。ユーザー指定によりFE・BE・DB・運用はnatuki53が兼任する。役割枠と実人数を区別し、5人が割り当てられたとは扱わない。
+更新日：2026-10-14。[Issue #12](https://github.com/fespay-team/fespay/issues/12)はPR #17で承認・完了済み。ユーザー指定によりFE・BE・DB・運用はnatuki53が兼任する。役割枠と実人数を区別し、5人が割り当てられたとは扱わない。
 
 | 枠 | 主担当の範囲 | GitHubアカウント | レビュー窓口 |
 | --- | --- | --- | --- |
@@ -17,3 +17,5 @@
 未決事項の決定窓口・期限・依存は[決定管理表](decisions.md)。natuki53は開発・運用・公開判定の窓口を兼任するが、法令判断の専門家や個々のイベント主催者の代わりに外部確認を完了扱いにしない。担当が決まったことと、公開gateが完了したことは別である。
 
 [開発計画](../project/development-plan.md)、[GitHub設定](github-setup.md)を参照する。
+
+AT-001～070の管理・実施窓口もnatuki53として[受入管理表](../testing/acceptance-status.md)へ同期した。作者外レビューと受入の全条件の合格は担当割当とは別に確認する。
