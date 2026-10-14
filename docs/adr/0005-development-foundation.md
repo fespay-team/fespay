@@ -1,6 +1,6 @@
 # ADR-0005：ローカル開発と検証の基盤
 
-- 状態：実装準備案。新しいPRでレビューする。
+- 状態：採択済み（2026-10-14、PR #15）。実装受入の残件は#13/#14。
 - 日付：2026-10-13
 - 担当：natuki53（ユーザー指定）
 - 関連：DEV-01/02、ARC、ACC/SEC、LED/DAT / [Issue #11](https://github.com/fespay-team/fespay/issues/11)
@@ -21,4 +21,4 @@
 
 別package managerよりNode同梱npmの小さなworkspaceを選ぶ。全サービスのDocker化より、ホストNode + DB Composeで編集時の待ち時間を抑える。CIは同じlockfile、型/build、設計/DB/認証試験を実行する。
 
-このADRは新しい準備案でPR #8/#9の承認を流用しない。実メール/Google、TOTP再利用/回復コード/試行制限、業務MFA/CSRF/Origin、運用migration/rollback、性能/復旧は#13/#14へ引き継ぐ。
+PR #15の3cbd03cをKawataKenshirouが承認し、2026-10-14に375b56dとしてマージした。実メール/Google、TOTP再利用/回復コード/試行制限、業務MFA/CSRF/Origin、運用migration/rollback、性能/復旧は#13/#14へ引き継ぐ。
