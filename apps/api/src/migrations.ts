@@ -17,6 +17,26 @@ export function guardDevelopmentDatabase(connectionString: string, development: 
 type Migration = { id: string; file: string; sha256: string };
 export async function applyDevelopmentMigrations(connectionString: string, appPassword: string, development: boolean, statusOnly = false) {
   guardDevelopmentDatabase(connectionString, development);
+  return applyMigrations(connectionString, appPassword, statusOnly);
+}
+
+export function guardDockerDatabase(connectionString: string, environment: string, isolatedDocker: boolean) {
+  const url = new URL(connectionString);
+  const expected = environment === 'local' ? '/fespay_dev' : environment === 'staging' ? '/fespay_staging' : '';
+  // The migration container shares the DB's network namespace. No remote host
+  // or production DB can be selected, and the old development guard stays intact.
+  if (!isolatedDocker || !expected || process.env.NODE_ENV === 'production'
+    || !['postgres:', 'postgresql:'].includes(url.protocol) || url.hostname !== '127.0.0.1'
+    || url.port !== '5432' || url.username !== 'fespay_owner' || url.pathname !== expected || url.search || url.hash) {
+    throw new Error('Docker migrations require an explicit isolated local/staging database');
+  }
+}
+export async function applyDockerMigrations(connectionString: string, appPassword: string, environment: string, isolatedDocker: boolean, statusOnly = false) {
+  guardDockerDatabase(connectionString, environment, isolatedDocker);
+  return applyMigrations(connectionString, appPassword, statusOnly);
+}
+
+async function applyMigrations(connectionString: string, appPassword: string, statusOnly: boolean) {
   if (!statusOnly && !/^[a-f0-9]{64}$/.test(appPassword)) throw new Error('Use a generated 32-byte hexadecimal FESPAY_APP_PASSWORD');
   const migrations: Migration[] = JSON.parse(await readFile(resolve(root, 'database/migrations/manifest.json'), 'utf8'));
   const sources = await Promise.all(migrations.map(async migration => {

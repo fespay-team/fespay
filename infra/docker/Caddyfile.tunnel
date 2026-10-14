@@ -1,0 +1,17 @@
+{
+  admin off
+}
+:8080 {
+  basic_auth {
+    {$FESPAY_STAGE_USER} {$FESPAY_STAGE_PASSWORD_HASH}
+  }
+  handle /v1/* {
+    reverse_proxy api:3000
+  }
+  handle /health/* {
+    reverse_proxy api:3000
+  }
+  handle {
+    reverse_proxy web:8080
+  }
+}

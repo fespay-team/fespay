@@ -1,0 +1,7 @@
+services:
+  gateway:
+    ports:
+      - ${FESPAY_BIND_ADDRESS:-0.0.0.0}:80:80
+      - ${FESPAY_BIND_ADDRESS:-0.0.0.0}:443:443
+    volumes:
+      - ./infra/docker/Caddyfile.staging:/etc/caddy/Caddyfile:ro

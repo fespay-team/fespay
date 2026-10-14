@@ -1,0 +1,15 @@
+{
+  admin off
+  skip_install_trust
+}
+https://localhost {
+  handle /v1/* {
+    reverse_proxy api:3000
+  }
+  handle /health/* {
+    reverse_proxy api:3000
+  }
+  handle {
+    reverse_proxy web:8080
+  }
+}
