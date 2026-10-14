@@ -2,12 +2,12 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 / API ID | 2026-10-09 / P01～P05、O01～O05、R01～R05 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 / API ID | 2026-10-14 / P01～P05、O01～O05、R01～R05 |
 | 要件 / 受入試験 | PRD-01/02、INV-01～05、ORD-01～06、REF-01～04、RPT-01～05、SEC-09、DAT-01～03 / AT-045～047、049～058、061、069 |
-| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
+| Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
-型は[OpenAPI](openapi.yaml)、金銭確定との接点は[決済・現金設計](payments-and-cash.md)を参照する。
+型は[OpenAPI](../openapi.yaml)、金銭確定との接点は[決済・現金設計](payments-and-cash.md)を参照する。
 
 ## 商品・在庫・画像
 
@@ -15,7 +15,7 @@
 
 在庫はon_hand/reserved/availableを非負32bit整数とし、reserved<=on_handを守る。入荷/廃棄/目標値訂正は理由付きの移動記録。手動減算は予約数を下回らせない。返金商品の再販戻しはRETURN_TO_STOCK、元refund_line_id、数量、resalable_confirmed=true、理由、版、キー必須。元商品/成立返金数量−復元済数量を排他再計算し、在庫・復元累計・移動を同一Txで確定する。
 
-画像はmultipartでJPEG/PNG/WebPの実内容を検証。5MB超413、偽MIME/SVG/HTML等415または422。デコード時の寸法/画素資源保護、長辺2048px以下への再エンコード・EXIF除去を適用する。外部URLを取得しない。DBに参照されなかったアップロードは回収し、画像キーを他店へ関連付けない。辺8,192px・総33,554,432画素・1フレームのAPI資源保護案は[HTTP契約](http-contract.md)。実デコーダのCPU/メモリ/時間制御とobject storageはBE/環境レビュー対象。
+画像はmultipartでJPEG/PNG/WebPの実内容を検証。5MB超413、偽MIME/SVG/HTML等415または422。デコード時の寸法/画素資源保護、長辺2048px以下への再エンコード・EXIF除去を適用する。外部URLを取得しない。DBに参照されなかったアップロードは回収し、画像キーを他店へ関連付けない。辺8,192px・総33,554,432画素・1フレームのAPI資源保護案は[HTTP契約](../common/http-contract.md)。実デコーダのCPU/メモリ/時間制御とobject storageはBE/環境レビュー対象。
 
 ## カートと注文
 

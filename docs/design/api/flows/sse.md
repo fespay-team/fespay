@@ -2,18 +2,18 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 | 2026-10-09 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 | 2026-10-14 |
 | 関連要件ID / 受入試験ID | TX-04/05、NET-02/04、ROL-03/06、PWA-01/02 / AT-021、036～038、058～060、062 |
-| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
+| 関連Issue / PR / ADR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) / [ADR-0003](../../../adr/0003-api-authentication-and-command-boundaries.md)（採択済み） |
 
 ## 接続・通知
 
-[OpenAPI](openapi.yaml)のN01で接続する。Cookieで認証し、Origin・event所属・本人対象または現在の業務照会権限を確認する。接続中も各通知の送信前に現在の許可範囲を確認する。停止・権限失効で配信資格を失った場合は接続を終了し、再接続でも再認可する。業務の新規処理停止だけなら、許可された既取引の確認通知は継続できる。
+[OpenAPI](../openapi.yaml)のN01で接続する。Cookieで認証し、Origin・event所属・本人対象または現在の業務照会権限を確認する。接続中も各通知の送信前に現在の許可範囲を確認する。停止・権限失効で配信資格を失った場合は接続を終了し、再接続でも再認可する。業務の新規処理停止だけなら、許可された既取引の確認通知は継続できる。
 
 金銭・注文・在庫のTx内でOutboxを書き、コミット後に通知する。通知失敗で金銭成立を取り消さない。at-least-onceを前提とし、重複通知はidで排除する。残高・金額・氏名・メール・QR/招待トークン・冪等キーをdataへ含めない。型の正本はOpenAPIのResourceChanged/ResyncNotice。
 
-OpenAPI 3.1ではHTTPストリーム全体をstringとして記載し、event名とdataのJSON型をx-event-data-schemasで結び付ける。[検証用プラグイン](validation/fespay-plugin.cjs)がこの参照をSchemaとして認識するため、参照切れと実際の未使用型も検出できる。[契約チェック](validation/README.md)ではSSE形式の例を分解し、dataとidを対応型で確認する。拡張参照を扱わないツールを使う場合は、この対応を別途読み込む必要がある。
+OpenAPI 3.1ではHTTPストリーム全体をstringとして記載し、event名とdataのJSON型をx-event-data-schemasで結び付ける。[検証用プラグイン](../validation/fespay-plugin.cjs)がこの参照をSchemaとして認識するため、参照切れと実際の未使用型も検出できる。[契約チェック](../validation/README.md)ではSSE形式の例を分解し、dataとidを対応型で確認する。拡張参照を扱わないツールを使う場合は、この対応を別途読み込む必要がある。
 
 | event | data・扱い |
 | --- | --- |
@@ -30,7 +30,7 @@ heartbeatは20秒のコメント行という詳細設計の補完案を維持す
 
 未知のUUID、他イベント/権限外のID、保持範囲外は対象の存在を明かさない共通reason CURSOR_UNAVAILABLEでresyncを送る。カーソルIDから権限を推定せず、保持中の通知も現在の認可で絞る。resyncは業務変更を行わない制御通知で、偽のOutbox UUIDを付けない。
 
-再取得中の通知取りこぼしを防ぐため、先にstreamを接続して通知を受け付け、正本再取得が完了した後に受信済みの変更対象をもう一度取得する。切断中も結果不明要求は[共通規約](conventions.md)の頻度で照会する。画面バックグラウンド時の不要な接続/ポーリングを停止し、復帰時に現在値を取り直す。
+再取得中の通知取りこぼしを防ぐため、先にstreamを接続して通知を受け付け、正本再取得が完了した後に受信済みの変更対象をもう一度取得する。切断中も結果不明要求は[共通規約](../common/conventions.md)の頻度で照会する。画面バックグラウンド時の不要な接続/ポーリングを停止し、復帰時に現在値を取り直す。
 
 世代をまたぐ遅いGETの排除、通知中のdirty再取得、EventSource error時の資格確認、SSE不可時のポーリング、画面更新を待機する条件は[画面復帰](client-flows.md)を参照する。
 

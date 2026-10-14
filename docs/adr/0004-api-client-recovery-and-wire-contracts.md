@@ -27,7 +27,7 @@ JSON256KiB/depth32/10,000ノード、multipart5,100,000bytes、画像8,192px/33,
 
 ## 成果物・検証
 
-[OpenAPI](../design/api/openapi.yaml)、[HTTP契約](../design/api/http-contract.md)、[画面復帰](../design/api/client-flows.md)、[CSV契約](../design/api/csv-contract.md)。[設計用検証](../design/api/validation/README.md)を実サービスの認可/金銭/排他/認証/性能試験と区別する。
+[OpenAPI](../design/api/openapi.yaml)、[HTTP契約](../design/api/common/http-contract.md)、[画面復帰](../design/api/flows/client-flows.md)、[CSV契約](../design/api/domains/csv-contract.md)。[設計用検証](../design/api/validation/README.md)を実サービスの認可/金銭/排他/認証/性能試験と区別する。
 
 承認記録：2026-10-13、marron46がPR #8の52ef2d4を承認し、ユーザーのマージ指示によりmainへ取り込み。実装受入は別工程。
 

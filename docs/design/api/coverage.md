@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8。実装担当枠は未割当） |
-| 更新日 / 基準 | 2026-10-09 / 要件v0.2、基本設計第14章 |
+| 状態 / 担当 / レビュー者 | 設計採択済み / natuki53 / marron46（PR #8） |
+| 更新日 / 基準 | 2026-10-14 / 要件v0.2、基本設計第14章 |
 | 要件・受入試験 | 下表の各operationがOpenAPIのx-requirement-ids/x-acceptance-test-idsを参照 |
 | Issue / PR | [Issue #7](https://github.com/fespay-team/fespay/issues/7) / [PR #8（承認・マージ済み）](https://github.com/fespay-team/fespay/pull/8) |
 
@@ -72,7 +72,7 @@
 | W02 | `getMyWalletActivity` |
 | N01 | `subscribeEventUpdates`、`getClientPolicy` |
 
-T02の汎用transactions POSTは、権限・本人承認を固定した各領域の確定操作へ分解した。Q04の詳細はevent配下へ統一。S02の招待秘密はPOST本文、O05の受取秘密発行はPOSTに具体化。A05は単一サービスの制御パス。これらは[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)のレビュー案。
+T02の汎用transactions POSTは、権限・本人承認を固定した各領域の確定操作へ分解した。Q04の詳細はevent配下へ統一。S02の招待秘密はPOST本文、O05の受取秘密発行はPOSTに具体化。A05は単一サービスの制御パス。これらは[ADR-0003](../../adr/0003-api-authentication-and-command-boundaries.md)で採択済みの設計。
 
 ## 内部処理とAPIの境界
 
@@ -92,9 +92,9 @@ T02の汎用transactions POSTは、権限・本人承認を固定した各領域
 | 範囲 | レビューできる成果物 |
 | --- | --- |
 | 要求/応答・認可・状態・元キー復帰 | 全58論理IDを171操作へ対応。金銭の中間状態と最終結果、62キー操作の照会、秘密の単回発行を定義 |
-| HTTP入力・コード・旧画面 | サイズ/深さ/画像資源案、400/413/415/422、54コードのHTTP/画面対応、client-policy、READ/RECOVERY/CURRENTと既成立復帰は[HTTP契約](http-contract.md) |
-| 認証と通知の画面復帰 | Google開始flow_idと検証済み照会、失われたlogin challenge、SSE/GET世代・dirty再取得・poll/更新待機は[画面復帰](client-flows.md) |
-| 集計・CSVの表示契約 | 売上の発生時/原決済期間再集計、店舗/商品数量/注文経路の行、列版/順序、生成開始/完了時刻、空結果/分割/partページング/配信は[CSV契約](csv-contract.md) |
+| HTTP入力・コード・旧画面 | サイズ/深さ/画像資源案、400/413/415/422、54コードのHTTP/画面対応、client-policy、READ/RECOVERY/CURRENTと既成立復帰は[HTTP契約](common/http-contract.md) |
+| 認証と通知の画面復帰 | Google開始flow_idと検証済み照会、失われたlogin challenge、SSE/GET世代・dirty再取得・poll/更新待機は[画面復帰](flows/client-flows.md) |
+| 集計・CSVの表示契約 | 売上の発生時/原決済期間再集計、店舗/商品数量/注文経路の行、列版/順序、生成開始/完了時刻、空結果/分割/partページング/配信は[CSV契約](domains/csv-contract.md) |
 | 形式/意味の設計検証 | schema状態ケース、HTTP入力/互換性/期間帰属/CSV参照手順、故意に壊したlint仕様を[保存して再実行](validation/README.md) |
 
 これらの設計契約とADR-0003/0004はPR #8で採択済み。実アプリで成立した動作としては扱わない。

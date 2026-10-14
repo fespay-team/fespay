@@ -1,10 +1,10 @@
 # CSVの列・時点・配信契約
 
-状態：API設計案、FE/BEレビュー前。担当：natuki53。更新日：2026-10-09。
+状態：設計採択済み（PR #8）。担当：natuki53。レビュー者：marron46。更新日：2026-10-14。
 要件：RPT-01～05、SEC-10、DAT-03。受入：AT-055～057。
-[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../adr/0004-api-client-recovery-and-wire-contracts.md)。
+[Issue #7](https://github.com/fespay-team/fespay/issues/7) / [ADR-0004](../../../adr/0004-api-client-recovery-and-wire-contracts.md)。
 
-列順と列版の正本は[OpenAPI](openapi.yaml)のx-csv-contract。CSVの表示契約で、テーブル/SQL/物理snapshotを指定しない。
+列順と列版の正本は[OpenAPI](../openapi.yaml)のx-csv-contract。CSVの表示契約で、テーブル/SQL/物理snapshotを指定しない。
 
 ## job・snapshot
 
