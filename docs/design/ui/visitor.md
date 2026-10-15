@@ -4,7 +4,7 @@
 | --- | --- |
 | 状態 | 下書き |
 | 担当 / レビュー者 | 未決 / 未決 |
-| 更新日 | 2026-10-14 |
+| 更新日 | 2026-10-15 |
 | 関連要件ID / 受入試験ID | 各画面に記載。横断：ROL-02、ROL-03、UI-01、UI-02、UI-03、UI-04、UI-07、NET-02、NET-04 / AT-010、AT-037、AT-068 |
 | 関連Issue / PR / ADR | 本書の関連Issue・PR・承認ADRは未決 |
 
@@ -18,11 +18,13 @@
 
 | 参考資料・実装 | 参照範囲・扱い |
 | --- | --- |
-| `apps/web`の簡易確認用プロトタイプ：[U01〜U05](../../../apps/web/src/App.tsx)、[U06〜U10](../../../apps/web/src/VisitorScreens.tsx) | 既存U01〜U10のクリック導線とMOCK表示の参考。正式なAPI・認証・金銭処理の実装ではない |
-| [PR #25](https://github.com/fespay-team/fespay/pull/25)：[prototype/（cdc0d3f）](https://github.com/fespay-team/fespay/tree/cdc0d3fb86bad42d0f5d346d581f13a401258af6/prototype) | 未マージ（2026-10-14確認）の別参考実装。ホーム・QR・入力・確認・結果・店舗一覧・履歴の表示配置と画面内操作をUI参考とする |
-| [PR #20](https://github.com/fespay-team/fespay/pull/20)：[Prototype.md（fc5897f）](https://github.com/fespay-team/fespay/blob/fc5897fbf9a9e367447941d982d4d6d9f4ecfcca/docs/design/Prototype.md) | 未マージ（2026-10-14確認）の説明資料。PR #25のデモ範囲と正式実装との差を整理する参考。設計・要件・受入試験の承認を示さない |
+| PR #35の`prototypes/visitor-ui-design`の設計確認用プロトタイプ：[U01〜U05](../../../prototypes/visitor-ui-design/src/App.tsx)、[U06〜U10](../../../prototypes/visitor-ui-design/src/VisitorScreens.tsx)、[README・起動方法](../../../prototypes/visitor-ui-design/README.md) | 既存U01〜U10の設計・クリック遷移とMOCK表示の参考。通常の`apps/web`の起動・buildから分離し、正式なAPI・認証・金銭処理の実装ではない |
+| [PR #25](https://github.com/fespay-team/fespay/pull/25)：[prototype/（cdc0d3f）](https://github.com/fespay-team/fespay/tree/cdc0d3fb86bad42d0f5d346d581f13a401258af6/prototype) | 未マージ（2026-10-15確認）の別参考実装。より具体的な操作体験の確認用で、ホーム・QR・入力・確認・結果・店舗一覧・履歴の表示配置と画面内操作をUI参考とする |
+| [PR #20](https://github.com/fespay-team/fespay/pull/20)：[Prototype.md（fc5897f）](https://github.com/fespay-team/fespay/blob/fc5897fbf9a9e367447941d982d4d6d9f4ecfcca/docs/design/Prototype.md) | 未マージ（2026-10-15確認）の説明資料。PR #25のデモ範囲と正式実装との差を整理する参考。設計・要件・受入試験の承認を示さない |
 
-PR #20・#25は正式仕様の根拠にしない。参照はPRまたは上記の固定コミットとし、`prototype/`や`docs/design/Prototype.md`がmainに存在する前提の相対リンクは使わない。MOCKの氏名・金額・イベント名・店舗名・番号・固定時刻・残り時間を正式データや初期値にしない。未実装の要件もU01〜U10の設計対象に残し、不明点は「未決」と記載する。今回の更新対象は本書と`screen-map.md`のみで、`apps/web`・PR #25の`prototype/`を変更しない。
+PR #20・#25は正式仕様の根拠にしない。参照はPRまたは上記の固定コミットとし、`prototype/`や`docs/design/Prototype.md`がmainに存在する前提の相対リンクは使わない。MOCKの氏名・金額・イベント名・店舗名・番号・固定時刻・残り時間を正式データや初期値にしない。未実装の要件もU01〜U10の設計対象に残し、不明点は「未決」と記載する。今回の更新はプロトタイプの分離に伴う参照先・位置付けの整理であり、U01〜U10の設計内容やPR #25の`prototype/`は変更しない。
+
+正式な来場者画面の組込み・API接続は [Issue #28](https://github.com/fespay-team/fespay/issues/28) / [Issue #29](https://github.com/fespay-team/fespay/issues/29)で行い、今回の分離作業では実装しない。両プロトタイプの確認・承認を、正式仕様・実装完了・受入完了の根拠にはしない。
 
 以降の「UI案」は、正本にある表示項目・操作を具体化する下書きの配置案である。既存の業務上の画面遷移・権限・成立条件・期限は変更しない。モーダル・折り畳み・確認票も同じ画面ID内の状態として扱い、最終配置・文言・実装方式は未決とする。
 
@@ -125,7 +127,7 @@ PR #20・#25は正式仕様の根拠にしない。参照はPRまたは上記の
 | 関連要件ID | PAY-B01、PAY-B02、PAY-B03、PAY-B04、PAY-B05、PAY-B06、PAY-A01、PAY-A02、PAY-C01、PAY-C02、QR-01、QR-02、QR-03、TX-01、TX-02、TX-03、TX-04、TX-05、TX-06、MNY-01、MNY-02、UI-02、UI-03 |
 | 関連受入試験ID | AT-022、AT-023、AT-024（金額）、AT-029、AT-030、AT-031（B方式・60秒／180秒・用途）、AT-032（A方式）、AT-033（C方式）、AT-034、AT-035、AT-036（承認内容・競合・原子性）、AT-037、AT-038（結果不明・再送）、AT-068（操作性） |
 
-`apps/web`の「有効期限 00:59」は60秒仕様を示すMOCK固定表示である。正式版ではサーバーの期限情報に基づく残り時間を表示する。BのQR期限と支払要求の承認期限を同じタイマーにしない。Aの新しい会計QRの発行・自動再生成は店舗側操作であり、来場者が旧要求を延長する操作を設けない（PAY-A02、詳細設計第13章）。
+`prototypes/visitor-ui-design`の設計確認用プロトタイプの「有効期限 00:59」は60秒仕様を示すMOCK固定表示である。正式版ではサーバーの期限情報に基づく残り時間を表示する。BのQR期限と支払要求の承認期限を同じタイマーにしない。Aの新しい会計QRの発行・自動再生成は店舗側操作であり、来場者が旧要求を延長する操作を設けない（PAY-A02、詳細設計第13章）。
 
 #### 支払QR・読取・確認の表示構成（UI案）
 
@@ -271,9 +273,9 @@ HELD後5分の無操作で警告、30分で調査対象一覧へ出すが自動�
 
 ### 参考実装との対応
 
-この表は`apps/web`と、未マージPR #25の`prototype/`を別の参考実装として整理する。要件の削減や受入合格を示さない。`apps/web`はMOCK・仮QRのクリック確認用、PR #25は同一ブラウザーのサンプルデータとデモQRを使う操作例であり、どちらも実際の金銭処理・本人認証・サーバーの台帳確定を行っていない。PR #20の説明資料はPR #25の範囲を説明する参考として読む。
+この表はPR #35の`prototypes/visitor-ui-design/`と、未マージPR #25の`prototype/`を別の参考実装として整理する。要件の削減や受入合格を示さない。PR #35はMOCK・仮QRによるU01〜U10の設計・遷移確認用、PR #25はデモ送金・チャージ・履歴検索や`localStorage`による模擬残高・履歴保存等の、より具体的な操作体験の確認用である。どちらも実際の金銭処理・本人認証・サーバーの台帳確定を行っておらず、正式仕様・受入完了の根拠にはしない。PR #20の説明資料はPR #25の範囲を説明する参考として読む。
 
-| 画面 | `apps/web`の簡易確認用プロトタイプ | PR #25の別参考実装 | 正本に基づき今後実装・検証する主な事項 |
+| 画面 | PR #35の`prototypes/visitor-ui-design`の設計確認用プロトタイプ | PR #25の`prototype/`の別参考実装 | 正本に基づき今後実装・検証する主な事項 |
 | --- | --- | --- | --- |
 | U01 | メール／GoogleのMOCKログイン→U02 | 未実装。マイページのデモアカウント切替は本人認証ではない | 登録・メール確認・復旧・認証連携・セッション失効 |
 | U02 | 検索、イベント一覧→案内→U03 | 単一サンプルイベントの案内モーダル | 未認証での公開閲覧、実データの掲載制御・ページング |
