@@ -522,6 +522,12 @@
   margin-top: 17px;
 }
 
+.charge-flow__cash-check > span {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
 .charge-flow__processed {
   display: flex;
   align-items: center;
@@ -534,6 +540,26 @@
 
 .charge-flow__processed svg {
   flex: none;
+}
+
+.charge-flow__submit-error {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #f1bbc2;
+  border-radius: 12px;
+  background: #fff4f5;
+  color: #ae3f4c;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+@media (max-height: 400px) {
+  .charge-flow__footer {
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .charge-flow__success {
@@ -679,6 +705,157 @@
 
   .charge-flow__money-row span {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 240px) {
+  .charge-flow__header {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 2px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  .charge-flow__header-title {
+    font-size: 12px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__progress {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .charge-flow__scroll {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .charge-flow__footer {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .charge-flow__intro {
+    flex-wrap: wrap;
+  }
+
+  .charge-flow__role {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__step {
+    margin-left: auto;
+  }
+
+  .charge-flow h2 {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__qr-card {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .charge-flow__qr-head {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .charge-flow__qr-head span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__identity-preview > div,
+  .charge-flow__detail-card > div,
+  .charge-flow__review-meta > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .charge-flow__identity-preview span,
+  .charge-flow__detail-card span,
+  .charge-flow__review-meta span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__identity-preview strong,
+  .charge-flow__detail-card strong,
+  .charge-flow__review-meta strong {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .charge-flow__check-row {
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .charge-flow__check-row > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__context {
+    padding-right: 9px;
+    padding-left: 9px;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__amount-input-wrap {
+    gap: 3px;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .charge-flow__amount-input-wrap input {
+    font-size: 23px;
+  }
+
+  .charge-flow__amount-input-wrap > span:first-child {
+    font-size: 21px;
+  }
+
+  .charge-flow__amount-presets {
+    grid-template-columns: 1fr;
+  }
+
+  .charge-flow__amount-summary {
+    flex-wrap: wrap;
+  }
+
+  .charge-flow__amount-summary strong {
+    width: 100%;
+  }
+
+  .charge-flow__money-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 9px 0;
+  }
+
+  .charge-flow__money-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .charge-flow__money-row strong {
+    font-size: 21px;
+  }
+
+  .charge-flow__primary {
+    font-size: 12px;
+    overflow-wrap: anywhere;
   }
 }
 

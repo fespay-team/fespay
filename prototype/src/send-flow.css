@@ -533,7 +533,7 @@
 }
 
 .send-flow__submit-error {
-  margin: 17px 0 0;
+  margin: 0;
   padding: 12px;
   border: 1px solid #f1bbc2;
   border-radius: 12px;
@@ -542,6 +542,14 @@
   font-size: 12px;
   font-weight: 800;
   line-height: 1.55;
+}
+
+@media (max-height: 400px) {
+  .send-flow__footer {
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .send-flow__success-icon {
@@ -651,6 +659,117 @@
   .send-flow__footer {
     padding-right: 16px;
     padding-left: 16px;
+  }
+}
+
+@media (max-width: 240px) {
+  .send-flow__header {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 2px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  .send-flow__header-title {
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .send-flow__header-title strong {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .send-flow__progress {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .send-flow__scroll {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .send-flow__footer {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .send-flow h2 {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  .send-flow__demo-note {
+    padding: 8px;
+  }
+
+  .send-flow__recipient,
+  .send-flow__selected-person,
+  .send-flow__review-person {
+    gap: 5px;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .send-flow__avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .send-flow__search {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .send-flow__balance-card {
+    padding: 9px;
+  }
+
+  .send-flow__amount-field {
+    gap: 3px;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .send-flow__amount-field input {
+    font-size: 23px;
+  }
+
+  .send-flow__amount-field > span:first-child {
+    font-size: 21px;
+  }
+
+  .send-flow__review-details > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .send-flow__review-details dt,
+  .send-flow__review-details dd {
+    max-width: 100%;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .send-flow__review-amount,
+  .send-flow__receipt-amount {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .send-flow__review-amount strong,
+  .send-flow__receipt-amount strong {
+    font-size: 25px;
+  }
+
+  .send-flow__primary {
+    font-size: 12px;
+    overflow-wrap: anywhere;
   }
 }
 

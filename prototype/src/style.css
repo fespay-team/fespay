@@ -11,7 +11,6 @@
   box-sizing: border-box;
 }
 html {
-  min-width: 320px;
   scrollbar-width: none;
 }
 html::-webkit-scrollbar {
@@ -19,7 +18,6 @@ html::-webkit-scrollbar {
 }
 body {
   margin: 0;
-  min-width: 320px;
 }
 button {
   font: inherit;
@@ -1371,6 +1369,288 @@ button:focus-visible {
   }
   .notice-feature strong {
     font-size: 10px;
+  }
+}
+@media (max-width: 319px) {
+  .quick-action strong,
+  .quick-action small {
+    white-space: normal;
+  }
+}
+@media (max-width: 280px) {
+  .topbar:not(.payment-topbar) {
+    height: auto;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 5px;
+    padding-bottom: 7px;
+  }
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-around;
+  }
+  .quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .section-heading {
+    flex-wrap: wrap;
+  }
+  .heading-title {
+    min-width: 0;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .event-info > strong,
+  .event-info > span {
+    white-space: normal;
+  }
+}
+@media (max-width: 240px) {
+  .status-bar {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .topbar:not(.payment-topbar) {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .brand {
+    min-height: 38px;
+    gap: 4px;
+  }
+  .brand-mark {
+    width: 29px;
+    height: 34px;
+  }
+  .brand-copy strong {
+    font-size: 19px;
+  }
+  .home-content,
+  .subpage-content {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .intro-line {
+    height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 5px 0 8px;
+  }
+  .intro-label {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .active-account-name {
+    max-width: 100%;
+  }
+  .wallet-toggle,
+  .wallet-card {
+    height: 220px;
+  }
+  .wallet-front {
+    padding: 10px 9px;
+  }
+  .wallet-brand {
+    gap: 3px;
+    font-size: 13px;
+    letter-spacing: 0.07em;
+  }
+  .wallet-brand svg {
+    width: 19px;
+    height: 23px;
+  }
+  .wallet-brand small {
+    padding: 3px 4px;
+    font-size: 7px;
+  }
+  .balance-block span {
+    font-size: 10px;
+  }
+  .flip-pill {
+    gap: 2px;
+    padding: 6px;
+    font-size: 9px;
+  }
+  .flip-pill svg:first-child {
+    width: 14px;
+  }
+  .flip-pill svg:last-child {
+    display: none;
+  }
+  .wallet-back {
+    padding: 9px 7px;
+  }
+  .qr-top {
+    gap: 2px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .qr-top svg {
+    width: 14px;
+  }
+  .qr-demo-tag {
+    padding: 3px 4px;
+    font-size: 7px;
+  }
+  .qr-content {
+    padding: 5px;
+  }
+  .qr-content svg {
+    width: min(84px, 65vw);
+    height: auto;
+  }
+  .qr-warning {
+    text-align: center;
+  }
+  .wallet-caption {
+    align-items: flex-start;
+  }
+  .action-orb {
+    width: 52px;
+    height: 52px;
+    border-width: 6px;
+  }
+  .quick-action strong {
+    white-space: normal;
+  }
+  .section-heading {
+    flex-wrap: wrap;
+  }
+  .heading-title {
+    min-width: 0;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .event-info {
+    top: 9px;
+    left: 8px;
+    width: calc(100% - 16px);
+    gap: 5px;
+  }
+  .event-info > strong {
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+  .event-info > span {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  .event-info em {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .mini-card {
+    height: auto;
+  }
+  .notice-feature strong {
+    white-space: normal;
+  }
+  .recent-card {
+    padding: 10px;
+  }
+  .transaction-row {
+    display: grid;
+    grid-template-columns: 29px minmax(0, 1fr);
+    gap: 5px 7px;
+  }
+  .transaction-icon {
+    width: 29px;
+    height: 29px;
+    grid-row: 1 / 3;
+  }
+  .transaction-amount {
+    min-width: 0;
+    grid-column: 2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .bottom-nav {
+    padding-right: 3px;
+    padding-left: 3px;
+  }
+  .bottom-nav button {
+    min-width: 0;
+    font-size: 9px;
+  }
+  .subpage-header {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .subpage-header h1 {
+    font-size: 21px;
+    overflow-wrap: anywhere;
+  }
+  .account-hero {
+    gap: 6px;
+  }
+  .account-avatar {
+    width: 38px;
+    height: 38px;
+    flex: none;
+  }
+  .account-hero > span {
+    min-width: 0;
+    flex: 1;
+  }
+  .account-hero strong,
+  .account-hero small {
+    overflow-wrap: anywhere;
+  }
+  .account-balance {
+    padding: 10px;
+  }
+  .demo-accounts {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .demo-account-list button {
+    gap: 5px;
+  }
+  .demo-account-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  .account-links {
+    padding: 0 6px;
+  }
+  .account-links button {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 18px;
+    gap: 4px;
+    font-size: 11px;
+  }
+  .account-links button svg {
+    width: 17px;
+  }
+  .toast {
+    border-radius: 13px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .toast svg {
+    flex: none;
+  }
+  .modal-sheet {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .modal-sheet h2 {
+    font-size: 18px;
+    overflow-wrap: anywhere;
+  }
+  .modal-list > div {
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 5px;
+  }
+  .modal-list strong,
+  .modal-list small,
+  .modal-detail,
+  .notice-detail {
+    overflow-wrap: anywhere;
+  }
+  .reset-actions {
+    grid-template-columns: 1fr;
   }
 }
 @media (min-width: 520px) {

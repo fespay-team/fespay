@@ -252,3 +252,84 @@
     padding-left: 16px;
   }
 }
+
+@media (max-width: 240px) {
+  .payment-content {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .topbar.payment-topbar {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .payment-qr-panel {
+    padding-right: 7px;
+    padding-left: 7px;
+    border-radius: 18px;
+  }
+
+  .payment-qr-panel-top {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .payment-qr-panel-top h1 {
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .payment-qr-art {
+    max-width: 100%;
+    padding: 5px;
+  }
+
+  .payment-qr-art svg {
+    width: min(90px, 56vw);
+  }
+
+  .payment-qr-caption {
+    overflow-wrap: anywhere;
+  }
+
+  .payment-balance {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .payment-balance > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .payment-scan-button {
+    display: block;
+    padding: 9px;
+  }
+
+  .payment-scan-icon {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 6px;
+  }
+
+  .payment-scan-copy {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .payment-scan-copy strong {
+    font-size: 12px;
+  }
+
+  .payment-scan-button > svg {
+    display: none;
+  }
+
+  .scan-demo-frame {
+    max-width: calc(100% - 16px);
+  }
+}
