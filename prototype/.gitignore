@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.npm-cache/
+*.log
+.env
+.env.*
+!.env.example
+*.local
+.vscode/
+.idea/
+.DS_Store
