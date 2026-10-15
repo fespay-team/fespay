@@ -46,22 +46,34 @@ export default function FittedBalance({ className, value }: FittedBalanceProps) 
     };
 
     fit();
+    let animationFrame: number | null = null;
+    const scheduleFit = () => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        fit();
+      });
+    };
     let observedWidth = container.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
       const width = container.getBoundingClientRect().width;
       if (Math.abs(width - observedWidth) < 0.1) return;
       observedWidth = width;
-      fit();
+      scheduleFit();
     });
     observer.observe(container);
+    // The CSS font size can change with vw even when the card width is fixed.
+    window.addEventListener("resize", scheduleFit);
     let active = true;
     document.fonts.ready.then(() => {
-      if (active) fit();
+      if (active) scheduleFit();
     });
 
     return () => {
       active = false;
       observer.disconnect();
+      window.removeEventListener("resize", scheduleFit);
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       measure.remove();
     };
   }, [className, value]);
