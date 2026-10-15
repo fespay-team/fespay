@@ -35,7 +35,7 @@ type ChargeFlowProps = {
   displayName: string;
   verificationCode: string;
   onClose: () => void;
-  onComplete: (outcome: ChargeOutcome) => void;
+  onComplete: (outcome: ChargeOutcome) => Promise<ChargeOutcome | null>;
 };
 
 type Stage = "qr" | "identity" | "amount" | "review" | "receipt";
@@ -51,7 +51,8 @@ const stageNumber: Record<Stage, number> = {
 function getAmountError(value: string): string | null {
   if (value === "") return null;
   if (value.includes("-")) return "マイナスの金額は入力できません。";
-  if (value.includes(".")) return "小数は入力できません。1円単位で入力してください。";
+  if (value.includes("."))
+    return "小数は入力できません。1円単位で入力してください。";
   if (!/^\d+$/.test(value)) return "半角数字のみで入力してください。";
   if (value.length > MAX_CHARGE_DIGITS)
     return `金額は${MAX_CHARGE_DIGITS}桁以内で入力してください。`;
@@ -94,6 +95,8 @@ export default function ChargeFlow({
   const [amountText, setAmountText] = useState("");
   const [clockTick, setClockTick] = useState(() => Date.now());
   const [receipt, setReceipt] = useState<ChargeOutcome | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const qrStart = useRef(Date.now());
   const qrSession = useRef(createDemoId());
   const completed = useRef(false);
@@ -102,7 +105,11 @@ export default function ChargeFlow({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const closeRef = useRef(onClose);
 
-  closeRef.current = onClose;
+  const closeFlow = () => {
+    if (!completed.current || stage === "receipt") onClose();
+  };
+
+  closeRef.current = closeFlow;
 
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -179,6 +186,8 @@ export default function ChargeFlow({
   const amount = validAmount ? BigInt(amountText) : 0n;
 
   const goBack = () => {
+    if (completed.current) return;
+    setSubmitError("");
     if (stage === "identity") setStage("qr");
     if (stage === "amount") setStage("identity");
     if (stage === "review") {
@@ -187,15 +196,18 @@ export default function ChargeFlow({
     }
   };
 
-  const confirmCash = () => {
+  const confirmCash = async () => {
     if (
       completed.current ||
+      stage !== "review" ||
       !validAmount ||
       !identityConfirmed ||
       !cashConfirmed
     )
       return;
     completed.current = true;
+    setIsSubmitting(true);
+    setSubmitError("");
     const outcome: ChargeOutcome = {
       transactionId: createDemoId(),
       amount,
@@ -205,9 +217,25 @@ export default function ChargeFlow({
       verificationCode,
       balanceAfter: balance + amount,
     };
-    setReceipt(outcome);
-    setStage("receipt");
-    onComplete(outcome);
+    try {
+      const committedOutcome = await onComplete(outcome);
+      if (!committedOutcome) {
+        completed.current = false;
+        setSubmitError(
+          "チャージを記録できませんでした。残高とブラウザーの保存設定を確認して、もう一度お試しください。",
+        );
+        return;
+      }
+      setReceipt(committedOutcome);
+      setStage("receipt");
+    } catch {
+      completed.current = false;
+      setSubmitError(
+        "チャージの保存に失敗しました。ブラウザーの保存設定を確認して、もう一度お試しください。",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const step = stageNumber[stage];
@@ -235,7 +263,7 @@ export default function ChargeFlow({
             className="charge-flow__icon-button"
             type="button"
             onClick={goBack}
-            disabled={stage === "qr" || isReceipt}
+            disabled={stage === "qr" || isReceipt || isSubmitting}
             aria-label="前の画面に戻る"
           >
             <ArrowLeft size={21} />
@@ -244,7 +272,8 @@ export default function ChargeFlow({
           <button
             className="charge-flow__icon-button"
             type="button"
-            onClick={onClose}
+            onClick={closeFlow}
+            disabled={isSubmitting}
             aria-label="チャージ画面を閉じる"
           >
             <X size={21} />
@@ -421,7 +450,8 @@ export default function ChargeFlow({
                 className={`charge-flow__input-help${amountError ? " is-error" : ""}`}
                 aria-live="polite"
               >
-                {amountError ?? `1円以上、${MAX_CHARGE_DIGITS}桁以内の整数を入力してください。`}
+                {amountError ??
+                  `1円以上、${MAX_CHARGE_DIGITS}桁以内の整数を入力してください。`}
               </p>
               <div
                 className="charge-flow__amount-presets"
@@ -451,14 +481,18 @@ export default function ChargeFlow({
                 来場者から現金を受け取る前に、金額を一緒に確認してください。
               </p>
               <div className="charge-flow__money-card">
-                <div className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}>
+                <div
+                  className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}
+                >
                   <span>
                     <Banknote size={22} /> 受け取る現金
                   </span>
                   <strong>{formatYen(amount)}</strong>
                 </div>
                 <div className="charge-flow__equals">同額</div>
-                <div className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}>
+                <div
+                  className={`charge-flow__money-row${amountText.length > 9 ? " is-long" : ""}`}
+                >
                   <span>
                     <WalletCards size={22} /> 追加する残高
                   </span>
@@ -485,16 +519,21 @@ export default function ChargeFlow({
                 <input
                   type="checkbox"
                   checked={cashConfirmed}
+                  disabled={isSubmitting}
                   onChange={(event) => setCashConfirmed(event.target.checked)}
                 />
                 <span>
-                  来場者から現金{formatYen(amount)}を受け取り、金額を確認しました
+                  来場者から現金{formatYen(amount)}
+                  を受け取り、金額を確認しました
                 </span>
               </label>
               <p className="charge-flow__notice">
                 <Info size={16} />{" "}
                 現金を受け取ってから「現金受領確認」を押してください。
               </p>
+              {submitError && (
+                <p className="charge-flow__submit-error">{submitError}</p>
+              )}
             </>
           )}
 
@@ -507,7 +546,9 @@ export default function ChargeFlow({
                 <CheckCircle2 size={18} />
                 <span>⑤ デモ残高への追加と取引記録を完了</span>
               </div>
-              <div className={`charge-flow__success${receipt.amount.toString().length > 9 ? " is-long" : ""}`}>
+              <div
+                className={`charge-flow__success${receipt.amount.toString().length > 9 ? " is-long" : ""}`}
+              >
                 <span className="charge-flow__success-icon">
                   <Check size={32} strokeWidth={3} />
                 </span>
@@ -578,18 +619,24 @@ export default function ChargeFlow({
           )}
           {stage === "review" && (
             <>
+              {submitError && (
+                <p className="charge-flow__submit-error" role="alert">
+                  保存に失敗しました。再試行してください。
+                </p>
+              )}
               <button
                 className="charge-flow__primary charge-flow__confirm"
                 type="button"
-                disabled={!cashConfirmed}
+                disabled={!cashConfirmed || isSubmitting}
                 onClick={confirmCash}
               >
-                現金受領確認 <Check size={20} />
+                {isSubmitting ? "記録中…" : "現金受領確認"} <Check size={20} />
               </button>
               <button
                 className="charge-flow__secondary"
                 type="button"
                 onClick={goBack}
+                disabled={isSubmitting}
               >
                 金額を修正する
               </button>
@@ -599,7 +646,7 @@ export default function ChargeFlow({
             <button
               className="charge-flow__primary"
               type="button"
-              onClick={onClose}
+              onClick={closeFlow}
             >
               ホームに戻る
             </button>

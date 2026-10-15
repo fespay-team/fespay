@@ -247,6 +247,56 @@ function loadDemoLedger(): DemoLedger {
   return initialLedger;
 }
 
+// Transaction commits must distinguish unavailable or damaged storage from an
+// empty store. Falling back to the sample ledger during a commit can erase a
+// transaction written by another tab.
+function readLedgerForCommit(): DemoLedger {
+  const stored = window.localStorage.getItem(LEDGER_STORAGE_KEY);
+  if (stored !== null) {
+    try {
+      const ledger = parseDemoLedger(JSON.parse(stored));
+      if (ledger) return ledger;
+    } catch {
+      // Report a failed commit instead of overwriting the unreadable ledger.
+    }
+    throw new Error("保存済みのデモデータを読み込めません。");
+  }
+
+  const previous = window.localStorage.getItem(PREVIOUS_LEDGER_STORAGE_KEY);
+  if (previous !== null) {
+    try {
+      const ledger = parseDemoLedger(JSON.parse(previous));
+      if (ledger) return ledger;
+    } catch {
+      // Try the older single-account format.
+    }
+  }
+  const legacyStored = window.localStorage.getItem(LEGACY_LEDGER_STORAGE_KEY);
+  if (legacyStored !== null) {
+    try {
+      const legacy: unknown = JSON.parse(legacyStored);
+      if (legacy && typeof legacy === "object") {
+        const raw = legacy as Record<string, unknown>;
+        const balance = parseStoredAmount(raw.balance);
+        const transactions = parseTransactions(raw.transactions);
+        if (balance !== null && balance >= 0n && transactions) {
+          return {
+            ...initialLedger,
+            accounts: initialLedger.accounts.map((account) =>
+              account.id === "001"
+                ? { ...account, balance, transactions }
+                : account,
+            ),
+          };
+        }
+      }
+    } catch {
+      // An explicit reset can replace damaged legacy data.
+    }
+  }
+  return initialLedger;
+}
+
 function FesPayMark({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -346,8 +396,17 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
 
 function App() {
   const [ledger, setLedger] = useState<DemoLedger>(loadDemoLedger);
+  const [selectedAccountId, setSelectedAccountId] = useState(() => {
+    try {
+      const saved = window.sessionStorage.getItem("fespay-demo-selected-account-v1");
+      if (ledger.accounts.some((account) => account.id === saved)) return saved!;
+    } catch {
+      // Account selection remains available for this page when storage is blocked.
+    }
+    return ledger.activeAccountId;
+  });
   const activeAccount =
-    ledger.accounts.find((account) => account.id === ledger.activeAccountId) ??
+    ledger.accounts.find((account) => account.id === selectedAccountId) ??
     ledger.accounts[0];
   const balance = activeAccount.balance;
   const balanceDigits = balance.toString().length;
@@ -369,12 +428,36 @@ function App() {
   const modalRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(ledger));
-    } catch {
-      // The prototype still works for this session when browser storage is unavailable.
+    const syncFromStorage = (event: StorageEvent) => {
+      if (event.key !== LEDGER_STORAGE_KEY && event.key !== null) return;
+      try {
+        setLedger(readLedgerForCommit());
+      } catch {
+        setToast("ほかのタブのデモデータを読み込めませんでした");
+      }
+    };
+    window.addEventListener("storage", syncFromStorage);
+    return () => window.removeEventListener("storage", syncFromStorage);
+  }, []);
+
+  const commitLedger = async <T,>(
+    mutate: (latest: DemoLedger) => { next: DemoLedger; result: T } | null,
+  ): Promise<T | null> => {
+    if (!navigator.locks) {
+      throw new Error("このブラウザーでは安全にデモデータを保存できません。");
     }
-  }, [ledger]);
+    return navigator.locks.request(LEDGER_STORAGE_KEY, { mode: "exclusive" }, () => {
+      const latest = readLedgerForCommit();
+      const change = mutate(latest);
+      if (!change) {
+        setLedger(latest);
+        return null;
+      }
+      window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(change.next));
+      setLedger(change.next);
+      return change.result;
+    });
+  };
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
@@ -445,48 +528,47 @@ function App() {
     setActiveTab("pay");
     window.scrollTo(0, 0);
   };
-  const completeCharge = (outcome: ChargeOutcome) => {
-    setLedger((current) => {
-      const account = current.accounts.find(
-        (item) => item.id === current.activeAccountId,
-      );
-      if (!account) return current;
-      if (
-        account.transactions.some(
-          (transaction) => transaction.id === outcome.transactionId,
-        )
-      )
-        return current;
-      const balanceAfter = account.balance + outcome.amount;
-      const completedAt = new Date(outcome.completedAt);
-      const charge: ChargeOutcome = { ...outcome, balanceAfter };
+  const completeCharge = async (outcome: ChargeOutcome): Promise<ChargeOutcome | null> => {
+    const accountId = activeAccount.id;
+    return commitLedger((latest) => {
+      const account = latest.accounts.find((item) => item.id === accountId);
+      if (!account || account.transactions.some((item) => item.id === outcome.transactionId))
+        return null;
+      const charge: ChargeOutcome = {
+        ...outcome,
+        balanceAfter: account.balance + outcome.amount,
+      };
+      const date = new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(outcome.completedAt));
       return {
-        ...current,
-        accounts: current.accounts.map((item) =>
-          item.id === account.id
-            ? {
-                ...item,
-                balance: balanceAfter,
-                transactions: [
-                  {
-                    id: outcome.transactionId,
-                    title: "現金チャージ（デモ）",
-                    date: new Intl.DateTimeFormat("ja-JP", {
-                      timeZone: "Asia/Tokyo",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }).format(completedAt),
-                    amount: outcome.amount,
-                    kind: "charge" as const,
-                    charge,
-                  },
-                  ...item.transactions,
-                ],
-              }
-            : item,
-        ),
+        next: {
+          ...latest,
+          accounts: latest.accounts.map((item) =>
+            item.id === accountId
+              ? {
+                  ...item,
+                  balance: charge.balanceAfter,
+                  transactions: [
+                    {
+                      id: outcome.transactionId,
+                      title: "現金チャージ（デモ）",
+                      date,
+                      amount: outcome.amount,
+                      kind: "charge" as const,
+                      charge,
+                    },
+                    ...item.transactions,
+                  ],
+                }
+              : item,
+          ),
+        },
+        result: charge,
       };
     });
   };
@@ -495,84 +577,116 @@ function App() {
     recipientId: string,
     amount: bigint,
     message: string,
-  ): SendReceipt | null => {
-    const recipient = ledger.accounts.find((account) => account.id === recipientId);
-    if (
-      !recipient ||
-      recipient.id === activeAccount.id ||
-      amount <= 0n ||
-      amount > balance ||
-      message.length > 50
-    )
-      return null;
-
-    const completedAt = new Date().toISOString();
-    const date = new Intl.DateTimeFormat("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(completedAt));
-    const transactionId = `DEMO-TRF-${window.crypto.randomUUID()}`;
+  ): Promise<SendReceipt | null> => {
     const senderId = activeAccount.id;
-    setLedger({
-      ...ledger,
-      accounts: ledger.accounts.map((account) => {
-        if (account.id === senderId) {
-          return {
-            ...account,
-            balance: account.balance - amount,
-            transactions: [
-              {
-                id: transactionId,
-                title: `${recipient.name}さんへ送金`,
-                date,
-                amount: -amount,
-                kind: "transfer_sent" as const,
-                transfer: {
-                  counterpartyId: recipient.id,
-                  counterpartyName: recipient.name,
-                  message,
-                  completedAt,
-                },
-              },
-              ...account.transactions,
-            ],
-          };
-        }
-        if (account.id === recipient.id) {
-          return {
-            ...account,
-            balance: account.balance + amount,
-            transactions: [
-              {
-                id: transactionId,
-                title: `${activeAccount.name}さんから受け取り`,
-                date,
-                amount,
-                kind: "transfer_received" as const,
-                transfer: {
-                  counterpartyId: senderId,
-                  counterpartyName: activeAccount.name,
-                  message,
-                  completedAt,
-                },
-              },
-              ...account.transactions,
-            ],
-          };
-        }
-        return account;
-      }),
+    return commitLedger((latest) => {
+      const sender = latest.accounts.find((account) => account.id === senderId);
+      const recipient = latest.accounts.find((account) => account.id === recipientId);
+      if (
+        !sender ||
+        !recipient ||
+        recipientId === senderId ||
+        amount <= 0n ||
+        amount > sender.balance ||
+        message.length > 50
+      ) return null;
+
+      const completedAt = new Date().toISOString();
+      const date = new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(completedAt));
+      const transactionId = `DEMO-TRF-${
+        typeof window.crypto?.randomUUID === "function"
+          ? window.crypto.randomUUID()
+          : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+      }`;
+      const transferFromSender = {
+        counterpartyId: recipient.id,
+        counterpartyName: recipient.name,
+        message,
+        completedAt,
+      };
+      const transferToRecipient = {
+        counterpartyId: sender.id,
+        counterpartyName: sender.name,
+        message,
+        completedAt,
+      };
+      const balanceAfter = sender.balance - amount;
+      return {
+        next: {
+          ...latest,
+          accounts: latest.accounts.map((account) => {
+            if (account.id === senderId) {
+              return {
+                ...account,
+                balance: balanceAfter,
+                transactions: [
+                  {
+                    id: transactionId,
+                    title: `${recipient.name}さんへ送金`,
+                    date,
+                    amount: -amount,
+                    kind: "transfer_sent" as const,
+                    transfer: transferFromSender,
+                  },
+                  ...account.transactions,
+                ],
+              };
+            }
+            if (account.id === recipientId) {
+              return {
+                ...account,
+                balance: account.balance + amount,
+                transactions: [
+                  {
+                    id: transactionId,
+                    title: `${sender.name}さんから受け取り`,
+                    date,
+                    amount,
+                    kind: "transfer_received" as const,
+                    transfer: transferToRecipient,
+                  },
+                  ...account.transactions,
+                ],
+              };
+            }
+            return account;
+          }),
+        },
+        result: {
+          transactionId,
+          recipientName: recipient.name,
+          amount,
+          completedAt,
+          balanceAfter,
+        },
+      };
     });
-    return {
-      transactionId,
-      recipientName: recipient.name,
-      amount,
-      completedAt,
-      balanceAfter: balance - amount,
-    };
+  };
+
+  const resetDemoData = async () => {
+    try {
+      if (!navigator.locks) throw new Error("Web Locks are unavailable");
+      await navigator.locks.request(LEDGER_STORAGE_KEY, { mode: "exclusive" }, () => {
+        window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(initialLedger));
+        setLedger(initialLedger);
+      });
+      setSelectedAccountId("001");
+      try {
+        window.sessionStorage.removeItem("fespay-demo-selected-account-v1");
+      } catch {
+        // Selection still resets for this page.
+      }
+      setToast("デモデータを初期化しました");
+    } catch {
+      setToast("デモデータを初期化できませんでした。ブラウザーの保存設定を確認してください");
+    }
+    setModal(null);
   };
 
   return (
@@ -952,7 +1066,12 @@ function App() {
                   type="button"
                   aria-pressed={account.id === activeAccount.id}
                   onClick={() => {
-                    setLedger((current) => ({ ...current, activeAccountId: account.id }));
+                    setSelectedAccountId(account.id);
+                    try {
+                      window.sessionStorage.setItem("fespay-demo-selected-account-v1", account.id);
+                    } catch {
+                      // Account selection still works until this page is closed.
+                    }
                     setActiveTab("home");
                     setFlipped(false);
                     setToast(`${account.name}に切り替えました`);
@@ -1171,11 +1290,7 @@ function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setLedger(initialLedger);
-                      setModal(null);
-                      setToast("デモデータを初期化しました");
-                    }}
+                    onClick={() => void resetDemoData()}
                   >
                     初期化する
                   </button>

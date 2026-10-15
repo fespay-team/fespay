@@ -30,7 +30,11 @@ type SendFlowProps = {
   senderName: string;
   recipients: SendRecipient[];
   onClose: () => void;
-  onSend: (recipientId: string, amount: bigint, message: string) => SendReceipt | null;
+  onSend: (
+    recipientId: string,
+    amount: bigint,
+    message: string,
+  ) => Promise<SendReceipt | null>;
 };
 
 type Stage = "recipient" | "amount" | "review" | "receipt";
@@ -63,6 +67,7 @@ export default function SendFlow({
   const [amountText, setAmountText] = useState("");
   const [message, setMessage] = useState("");
   const [receipt, setReceipt] = useState<SendReceipt | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const submitted = useRef(false);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -70,7 +75,11 @@ export default function SendFlow({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const closeRef = useRef(onClose);
 
-  closeRef.current = onClose;
+  const closeFlow = () => {
+    if (!submitted.current || stage === "receipt") onClose();
+  };
+
+  closeRef.current = closeFlow;
 
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -133,25 +142,25 @@ export default function SendFlow({
       person.name.toLocaleLowerCase("ja-JP").includes(normalizedQuery) ||
       person.id.toLocaleLowerCase("ja-JP").includes(normalizedQuery),
   );
-  const amount = /^\d+$/.test(amountText) && amountText.length <= MAX_SEND_DIGITS
-    ? BigInt(amountText)
-    : 0n;
-  const amountError =
-    !amountText
-      ? "1円以上の整数を入力してください"
-      : amountText.includes("-")
-        ? "マイナスの金額は入力できません"
+  const amount =
+    /^\d+$/.test(amountText) && amountText.length <= MAX_SEND_DIGITS
+      ? BigInt(amountText)
+      : 0n;
+  const amountError = !amountText
+    ? "1円以上の整数を入力してください"
+    : amountText.includes("-")
+      ? "マイナスの金額は入力できません"
       : amountText.includes(".")
         ? "小数は入力できません。1円単位で入力してください"
-      : !/^\d+$/.test(amountText)
-        ? "半角数字のみで入力してください"
-      : amountText.length > MAX_SEND_DIGITS
-        ? `金額は${MAX_SEND_DIGITS}桁以内で入力してください`
-      : amount <= 0n
-        ? "1円以上の整数を入力してください"
-      : amount > balance
-        ? "残高が不足しています"
-        : "";
+        : !/^\d+$/.test(amountText)
+          ? "半角数字のみで入力してください"
+          : amountText.length > MAX_SEND_DIGITS
+            ? `金額は${MAX_SEND_DIGITS}桁以内で入力してください`
+            : amount <= 0n
+              ? "1円以上の整数を入力してください"
+              : amount > balance
+                ? "残高が不足しています"
+                : "";
   const canContinue = !amountError && recipient !== null;
 
   const goBack = () => {
@@ -161,21 +170,30 @@ export default function SendFlow({
     if (stage === "amount") setStage("recipient");
   };
 
-  const confirmSend = () => {
-    if (submitted.current || !recipient || amountError || stage !== "review") return;
+  const confirmSend = async () => {
+    if (submitted.current || !recipient || amountError || stage !== "review")
+      return;
     submitted.current = true;
+    setIsSubmitting(true);
+    setSubmitError("");
     try {
-      const outcome = onSend(recipient.id, amount, message.trim());
+      const outcome = await onSend(recipient.id, amount, message.trim());
       if (!outcome) {
         submitted.current = false;
-        setSubmitError("送金デモを完了できませんでした。残高と金額を確認して、もう一度お試しください。");
+        setSubmitError(
+          "送金デモを完了できませんでした。残高と金額を確認して、もう一度お試しください。",
+        );
         return;
       }
       setReceipt(outcome);
       setStage("receipt");
     } catch {
       submitted.current = false;
-      setSubmitError("送金デモを完了できませんでした。もう一度お試しください。");
+      setSubmitError(
+        "送金の保存に失敗しました。ブラウザーの保存設定を確認して、もう一度お試しください。",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -186,7 +204,7 @@ export default function SendFlow({
       className="send-flow-overlay"
       ref={overlayRef}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) closeFlow();
       }}
     >
       <section
@@ -217,14 +235,18 @@ export default function SendFlow({
             className="send-flow__icon-button"
             type="button"
             aria-label="送金画面を閉じる"
-            onClick={onClose}
+            onClick={closeFlow}
+            disabled={isSubmitting}
           >
             <X size={21} />
           </button>
         </header>
 
         {stage !== "receipt" && (
-          <div className="send-flow__progress" aria-label={`ステップ ${progress} / 3`}>
+          <div
+            className="send-flow__progress"
+            aria-label={`ステップ ${progress} / 3`}
+          >
             {[1, 2, 3].map((step) => (
               <span
                 className={`send-flow__progress-bar${step <= progress ? " is-current" : ""}`}
@@ -248,10 +270,18 @@ export default function SendFlow({
               <h2 id="send-flow-heading" ref={headingRef} tabIndex={-1}>
                 送る相手を選ぶ
               </h2>
-              <p className="send-flow__lead">このブラウザーのサンプルアカウントを名前または ID で探してください。</p>
-              <label className="send-flow__search" htmlFor="send-recipient-search">
+              <p className="send-flow__lead">
+                このブラウザーのサンプルアカウントを名前または ID
+                で探してください。
+              </p>
+              <label
+                className="send-flow__search"
+                htmlFor="send-recipient-search"
+              >
                 <Search size={19} aria-hidden="true" />
-                <span className="send-flow__sr-only">名前または FesPay ID で送金先を検索</span>
+                <span className="send-flow__sr-only">
+                  名前または FesPay ID で送金先を検索
+                </span>
                 <input
                   id="send-recipient-search"
                   type="search"
@@ -309,7 +339,9 @@ export default function SendFlow({
               <h2 id="send-flow-heading" ref={headingRef} tabIndex={-1}>
                 金額を入力
               </h2>
-              <p className="send-flow__lead">{recipient.name}さんに送る金額を入力してください。</p>
+              <p className="send-flow__lead">
+                {recipient.name}さんに送る金額を入力してください。
+              </p>
               <div className="send-flow__selected-person">
                 <span className="send-flow__avatar" aria-hidden="true">
                   <UserRound size={22} />
@@ -343,8 +375,16 @@ export default function SendFlow({
                 <span id="send-amount-help">1円単位、30桁まで入力できます</span>
                 <span>残高 {formatYen(balance)}</span>
               </div>
-              <p className="send-flow__field-error" id="send-amount-error" role="status">
-                {amountText ? amountError : balance === 0n ? "残高がありません。先にチャージしてください。" : ""}
+              <p
+                className="send-flow__field-error"
+                id="send-amount-error"
+                role="status"
+              >
+                {amountText
+                  ? amountError
+                  : balance === 0n
+                    ? "残高がありません。先にチャージしてください。"
+                    : ""}
               </p>
               <label className="send-flow__field-label" htmlFor="send-message">
                 メッセージ <span>任意</span>
@@ -353,7 +393,9 @@ export default function SendFlow({
                 className="send-flow__message-field"
                 id="send-message"
                 value={message}
-                onChange={(event) => setMessage(event.target.value.slice(0, 50))}
+                onChange={(event) =>
+                  setMessage(event.target.value.slice(0, 50))
+                }
                 maxLength={50}
                 rows={3}
                 placeholder="例：屋台代ありがとう！"
@@ -371,7 +413,9 @@ export default function SendFlow({
               <h2 id="send-flow-heading" ref={headingRef} tabIndex={-1}>
                 送る内容を確認
               </h2>
-              <p className="send-flow__lead">相手と金額を確認してから確定してください。</p>
+              <p className="send-flow__lead">
+                相手と金額を確認してから確定してください。
+              </p>
               <div className="send-flow__review-card">
                 <div className="send-flow__review-person">
                   <span className="send-flow__avatar" aria-hidden="true">
@@ -401,7 +445,7 @@ export default function SendFlow({
                 )}
                 <div>
                   <dt>送金後の残高</dt>
-                  <dd>{formatYen(balance - amount)}</dd>
+                  <dd>{amountError ? "—" : formatYen(balance - amount)}</dd>
                 </div>
               </dl>
               <p className="send-flow__review-note">
@@ -409,9 +453,7 @@ export default function SendFlow({
                 確定すると、このブラウザー内のデモ残高と履歴が更新されます。
               </p>
               {submitError && (
-                <p className="send-flow__submit-error" role="alert">
-                  {submitError}
-                </p>
+                <p className="send-flow__submit-error">{submitError}</p>
               )}
             </>
           )}
@@ -421,7 +463,12 @@ export default function SendFlow({
               <div className="send-flow__success-icon" aria-hidden="true">
                 <CheckCircle2 size={45} strokeWidth={1.8} />
               </div>
-              <h2 id="send-flow-heading" className="send-flow__success-title" ref={headingRef} tabIndex={-1}>
+              <h2
+                id="send-flow-heading"
+                className="send-flow__success-title"
+                ref={headingRef}
+                tabIndex={-1}
+              >
                 送金デモが完了しました
               </h2>
               <p className="send-flow__success-lead">
@@ -470,17 +517,31 @@ export default function SendFlow({
               </button>
             )}
             {stage === "review" && (
-              <button
-                className="send-flow__primary send-flow__confirm"
-                type="button"
-                disabled={submitted.current || Boolean(amountError)}
-                onClick={confirmSend}
-              >
-                <Send size={18} aria-hidden="true" /> 送金デモを確定する
-              </button>
+              <>
+                {(amountError || submitError) && (
+                  <p className="send-flow__submit-error" role="alert">
+                    {amountError
+                      ? `${amountError}。金額を変更してから、もう一度確認してください。`
+                      : "保存に失敗しました。再試行してください。"}
+                  </p>
+                )}
+                <button
+                  className="send-flow__primary send-flow__confirm"
+                  type="button"
+                  disabled={isSubmitting || Boolean(amountError)}
+                  onClick={confirmSend}
+                >
+                  <Send size={18} aria-hidden="true" />{" "}
+                  {isSubmitting ? "記録中…" : "送金デモを確定する"}
+                </button>
+              </>
             )}
             {stage === "receipt" && (
-              <button className="send-flow__primary" type="button" onClick={onClose}>
+              <button
+                className="send-flow__primary"
+                type="button"
+                onClick={closeFlow}
+              >
                 ホームへ戻る
               </button>
             )}
