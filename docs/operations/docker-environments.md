@@ -91,6 +91,12 @@ Caddyが対象hostの証明書を取得する。DNS/外部ポート/TLSは実際
 
 Docker migrationはDBのnetwork namespaceを共有し、`127.0.0.1:5432`、owner、local/stagingのDB名、明示フラグを検査する。既存のホスト開発migrationのloopback制限は維持する。変更済みchecksum、不明migration、本番名、リモート接続を拒否する。
 
+### Windowsでmigrationがchecksum不一致になる場合
+
+SQLをCRLFでチェックアウトすると、manifestに記録されたLFのSHA-256と一致せず、DB接続前にmigrationが終了する。Dockerのbuildはホスト上のSQLをそのままコピーするため、コンテナー内でも不一致になる。`.gitattributes` の `*.sql text eol=lf` でSQLの改行を固定する。
+
+以前のチェックアウトでSQLがCRLFのまま残っている場合は、エディターで `docs/design/database/sql/initial-schema-draft.sql` と `database/migrations/*.sql` をLFで保存し、`./scripts/docker-env.ps1 -Mode local -Action up` を再実行する。イメージが再buildされてmigrationが再実行される。manifestのchecksumやDB volumeを変更・削除する必要はない。
+
 ## 検証範囲
 
 ```bash
