@@ -1,0 +1,36 @@
+name: Validate prototype
+
+on:
+  pull_request:
+    paths:
+      - "prototype/**"
+      - ".github/workflows/validate-prototype.yml"
+  push:
+    paths:
+      - "prototype/**"
+      - ".github/workflows/validate-prototype.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build and test prototype
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prototype
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: prototype/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run unit tests
+        run: npm test
