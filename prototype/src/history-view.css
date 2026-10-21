@@ -176,7 +176,9 @@
 .history-entry-amount {
   flex: none;
   color: #1b2e53;
-  font: 700 12px Arial, sans-serif;
+  font:
+    700 12px Arial,
+    sans-serif;
   white-space: nowrap;
 }
 

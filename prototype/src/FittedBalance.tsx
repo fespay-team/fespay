@@ -5,7 +5,13 @@ type FittedBalanceProps = {
   value: string;
 };
 
-export default function FittedBalance({ className, value }: FittedBalanceProps) {
+// Product requirement: show every balance digit on one line, even after a
+// 30-digit charge. Keep the measurements and resize subscriptions here so
+// the page components only need to provide the formatted amount.
+export default function FittedBalance({
+  className,
+  value,
+}: FittedBalanceProps) {
   const amountRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
@@ -25,17 +31,20 @@ export default function FittedBalance({ className, value }: FittedBalanceProps) 
     measure.style.whiteSpace = "nowrap";
     measure.style.fontSize = "";
     container.appendChild(measure);
+    const textRange = document.createRange();
+    textRange.selectNodeContents(measure);
 
     const fit = () => {
-      const baseSize = Number.parseFloat(window.getComputedStyle(measure).fontSize);
-      const textRange = document.createRange();
-      textRange.selectNodeContents(measure);
+      const baseSize = Number.parseFloat(
+        window.getComputedStyle(measure).fontSize,
+      );
       const textWidth = textRange.getBoundingClientRect().width;
       const containerStyle = window.getComputedStyle(container);
       const rightEdge =
         container.getBoundingClientRect().right -
         Number.parseFloat(containerStyle.paddingRight || "0");
-      const availableWidth = rightEdge - amount.getBoundingClientRect().left - 2;
+      const availableWidth =
+        rightEdge - amount.getBoundingClientRect().left - 2;
 
       if (textWidth <= 0 || availableWidth <= 0) return;
       const fontSize =

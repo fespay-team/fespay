@@ -60,7 +60,9 @@
   border-radius: 100px;
   background: #e8f2ff;
   color: #3479e9;
-  font: 800 9px Arial, sans-serif;
+  font:
+    800 9px Arial,
+    sans-serif;
   letter-spacing: 0.12em;
 }
 
@@ -229,7 +231,9 @@
   place-items: center;
   border: 2px solid #9edaff;
   border-radius: 17px;
-  box-shadow: 0 0 0 8px #a5dcff17, inset 0 0 24px #8ed3ff2b;
+  box-shadow:
+    0 0 0 8px #a5dcff17,
+    inset 0 0 24px #8ed3ff2b;
 }
 
 .scan-demo strong {
