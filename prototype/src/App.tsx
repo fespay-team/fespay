@@ -19,44 +19,22 @@ import {
   X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import ChargeFlow, { type ChargeOutcome } from "./ChargeFlow";
+import ChargeFlow from "./ChargeFlow";
 import FittedBalance from "./FittedBalance";
 import HistoryView from "./HistoryView";
-import SendFlow, { type SendReceipt } from "./SendFlow";
-import { formatYen as yen, parseStoredAmount, stringifyMoney } from "./money";
+import SendFlow from "./SendFlow";
+import { useDemoLedger } from "./hooks/useDemoLedger.ts";
+import type { Transaction } from "./domain/ledger.ts";
+import { formatYen as yen } from "./money";
 import "./payment.css";
 import festivalStalls from "./assets/festival-stalls.png";
 import festivalFood from "./assets/festival-food.png";
 
 type Tab = "home" | "pay" | "history" | "account";
-type Modal = "stores" | "event" | "notice" | "notifications" | "scan" | "reset" | null;
-type Transaction = {
-  id: string;
-  title: string;
-  date: string;
-  amount: bigint;
-  kind: "payment" | "charge" | "transfer_sent" | "transfer_received";
-  charge?: ChargeOutcome;
-  transfer?: {
-    counterpartyId: string;
-    counterpartyName: string;
-    message: string;
-    completedAt: string;
-  };
-};
-type DemoAccount = {
-  id: string;
-  name: string;
-  balance: bigint;
-  transactions: Transaction[];
-};
-type DemoLedger = { activeAccountId: string; accounts: DemoAccount[] };
-
+type Modal =
+  "stores" | "event" | "notice" | "notifications" | "scan" | "reset" | null;
 const EVENT_NAME = "みどりの森まつり";
 const VERIFICATION_CODE = "4827";
-const LEDGER_STORAGE_KEY = "fespay-demo-ledger-v3";
-const PREVIOUS_LEDGER_STORAGE_KEY = "fespay-demo-ledger-v2";
-const LEGACY_LEDGER_STORAGE_KEY = "fespay-demo-ledger-v1";
 const DEMO_PAYMENT_QR_VALUE = "FESPAY-DEMO-PAYMENT-QR-NOT-VALID";
 
 const modalLabels: Record<Exclude<Modal, null>, string> = {
@@ -67,235 +45,6 @@ const modalLabels: Record<Exclude<Modal, null>, string> = {
   scan: "QRをスキャンする",
   reset: "デモデータの初期化",
 };
-
-const initialTransactions: Transaction[] = [
-  {
-    id: "sample-payment-1",
-    title: "からあげ屋台",
-    date: "10月9日 13:21",
-    amount: -850n,
-    kind: "payment",
-  },
-  {
-    id: "sample-charge-1",
-    title: "デモチャージ",
-    date: "10月9日 12:05",
-    amount: 3000n,
-    kind: "charge",
-  },
-  {
-    id: "sample-payment-2",
-    title: "青空ドリンク",
-    date: "10月9日 11:38",
-    amount: -500n,
-    kind: "payment",
-  },
-];
-
-const initialLedger: DemoLedger = {
-  activeAccountId: "001",
-  accounts: [
-    { id: "001", name: "デモ来場者", balance: 12800n, transactions: initialTransactions },
-    { id: "002", name: "佐藤 はな", balance: 3200n, transactions: [] },
-    { id: "003", name: "田中 そうた", balance: 7600n, transactions: [] },
-    { id: "004", name: "山本 りん", balance: 1400n, transactions: [] },
-  ],
-};
-
-function parseTransaction(value: unknown): Transaction | null {
-  if (!value || typeof value !== "object") return null;
-  const raw = value as Record<string, unknown>;
-  const amount = parseStoredAmount(raw.amount);
-  const kind = raw.kind;
-  const outgoing = kind === "payment" || kind === "transfer_sent";
-  const incoming = kind === "charge" || kind === "transfer_received";
-  if (
-    typeof raw.id !== "string" ||
-    typeof raw.title !== "string" ||
-    typeof raw.date !== "string" ||
-    amount === null ||
-    (!outgoing && !incoming) ||
-    (outgoing && amount >= 0n) ||
-    (incoming && amount <= 0n)
-  ) return null;
-
-  let charge: ChargeOutcome | undefined;
-  if (raw.charge !== undefined) {
-    if (!raw.charge || typeof raw.charge !== "object") return null;
-    const item = raw.charge as Record<string, unknown>;
-    const chargeAmount = parseStoredAmount(item.amount);
-    const balanceAfter = parseStoredAmount(item.balanceAfter);
-    if (
-      typeof item.transactionId !== "string" ||
-      typeof item.completedAt !== "string" ||
-      typeof item.eventName !== "string" ||
-      typeof item.displayName !== "string" ||
-      typeof item.verificationCode !== "string" ||
-      chargeAmount === null || chargeAmount <= 0n ||
-      balanceAfter === null || balanceAfter < 0n
-    ) return null;
-    charge = {
-      transactionId: item.transactionId,
-      amount: chargeAmount,
-      completedAt: item.completedAt,
-      eventName: item.eventName,
-      displayName: item.displayName,
-      verificationCode: item.verificationCode,
-      balanceAfter,
-    };
-  }
-
-  let transfer: Transaction["transfer"];
-  if (raw.transfer !== undefined) {
-    if (!raw.transfer || typeof raw.transfer !== "object") return null;
-    const item = raw.transfer as Record<string, unknown>;
-    if (
-      typeof item.counterpartyId !== "string" ||
-      typeof item.counterpartyName !== "string" ||
-      typeof item.message !== "string" ||
-      typeof item.completedAt !== "string"
-    ) return null;
-    transfer = {
-      counterpartyId: item.counterpartyId,
-      counterpartyName: item.counterpartyName,
-      message: item.message,
-      completedAt: item.completedAt,
-    };
-  }
-
-  return {
-    id: raw.id,
-    title: raw.title,
-    date: raw.date,
-    amount,
-    kind,
-    ...(charge ? { charge } : {}),
-    ...(transfer ? { transfer } : {}),
-  };
-}
-
-function parseTransactions(value: unknown): Transaction[] | null {
-  if (!Array.isArray(value)) return null;
-  const transactions: Transaction[] = [];
-  for (const item of value) {
-    const transaction = parseTransaction(item);
-    if (!transaction) return null;
-    transactions.push(transaction);
-  }
-  return transactions;
-}
-
-function parseDemoLedger(value: unknown): DemoLedger | null {
-  if (!value || typeof value !== "object") return null;
-  const raw = value as Record<string, unknown>;
-  if (
-    typeof raw.activeAccountId !== "string" ||
-    !Array.isArray(raw.accounts) ||
-    raw.accounts.length !== initialLedger.accounts.length
-  ) return null;
-  const accounts: DemoAccount[] = [];
-  for (const [index, value] of raw.accounts.entries()) {
-    if (!value || typeof value !== "object") return null;
-    const item = value as Record<string, unknown>;
-    const balance = parseStoredAmount(item.balance);
-    const transactions = parseTransactions(item.transactions);
-    if (
-      item.id !== initialLedger.accounts[index].id ||
-      item.name !== initialLedger.accounts[index].name ||
-      balance === null || balance < 0n || !transactions
-    ) return null;
-    accounts.push({ id: item.id, name: item.name, balance, transactions });
-  }
-  if (!accounts.some((account) => account.id === raw.activeAccountId)) return null;
-  return { activeAccountId: raw.activeAccountId, accounts };
-}
-
-function loadDemoLedger(): DemoLedger {
-  try {
-    for (const key of [LEDGER_STORAGE_KEY, PREVIOUS_LEDGER_STORAGE_KEY]) {
-      const stored = window.localStorage.getItem(key);
-      if (!stored) continue;
-      try {
-        const ledger = parseDemoLedger(JSON.parse(stored));
-        if (ledger) return ledger;
-      } catch {
-        // Try the previous stored version.
-      }
-    }
-    const legacyStored = window.localStorage.getItem(LEGACY_LEDGER_STORAGE_KEY);
-    if (legacyStored) {
-      const legacy: unknown = JSON.parse(legacyStored);
-      if (legacy && typeof legacy === "object") {
-        const raw = legacy as Record<string, unknown>;
-        const balance = parseStoredAmount(raw.balance);
-        const transactions = parseTransactions(raw.transactions);
-        if (balance !== null && balance >= 0n && transactions) {
-          return {
-            ...initialLedger,
-            accounts: initialLedger.accounts.map((account) =>
-              account.id === "001"
-                ? { ...account, balance, transactions }
-                : account,
-            ),
-          };
-        }
-      }
-    }
-  } catch {
-    // Invalid or unavailable browser storage starts a fresh demo.
-  }
-  return initialLedger;
-}
-
-// Transaction commits must distinguish unavailable or damaged storage from an
-// empty store. Falling back to the sample ledger during a commit can erase a
-// transaction written by another tab.
-function readLedgerForCommit(): DemoLedger {
-  const stored = window.localStorage.getItem(LEDGER_STORAGE_KEY);
-  if (stored !== null) {
-    try {
-      const ledger = parseDemoLedger(JSON.parse(stored));
-      if (ledger) return ledger;
-    } catch {
-      // Report a failed commit instead of overwriting the unreadable ledger.
-    }
-    throw new Error("保存済みのデモデータを読み込めません。");
-  }
-
-  const previous = window.localStorage.getItem(PREVIOUS_LEDGER_STORAGE_KEY);
-  if (previous !== null) {
-    try {
-      const ledger = parseDemoLedger(JSON.parse(previous));
-      if (ledger) return ledger;
-    } catch {
-      // Try the older single-account format.
-    }
-  }
-  const legacyStored = window.localStorage.getItem(LEGACY_LEDGER_STORAGE_KEY);
-  if (legacyStored !== null) {
-    try {
-      const legacy: unknown = JSON.parse(legacyStored);
-      if (legacy && typeof legacy === "object") {
-        const raw = legacy as Record<string, unknown>;
-        const balance = parseStoredAmount(raw.balance);
-        const transactions = parseTransactions(raw.transactions);
-        if (balance !== null && balance >= 0n && transactions) {
-          return {
-            ...initialLedger,
-            accounts: initialLedger.accounts.map((account) =>
-              account.id === "001"
-                ? { ...account, balance, transactions }
-                : account,
-            ),
-          };
-        }
-      }
-    } catch {
-      // An explicit reset can replace damaged legacy data.
-    }
-  }
-  return initialLedger;
-}
 
 function FesPayMark({ className = "" }: { className?: string }) {
   return (
@@ -384,9 +133,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
         )}
       </span>
       <strong
-        className={
-          `transaction-amount${transaction.amount > 0n ? " positive" : ""}${transaction.amount.toString().replace("-", "").length >= 13 ? " is-long" : ""}`
-        }
+        className={`transaction-amount${transaction.amount > 0n ? " positive" : ""}${transaction.amount.toString().replace("-", "").length >= 13 ? " is-long" : ""}`}
       >
         {transaction.amount > 0n ? "+" : "−"} {yen(transaction.amount)}
       </strong>
@@ -395,19 +142,15 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
 }
 
 function App() {
-  const [ledger, setLedger] = useState<DemoLedger>(loadDemoLedger);
-  const [selectedAccountId, setSelectedAccountId] = useState(() => {
-    try {
-      const saved = window.sessionStorage.getItem("fespay-demo-selected-account-v1");
-      if (ledger.accounts.some((account) => account.id === saved)) return saved!;
-    } catch {
-      // Account selection remains available for this page when storage is blocked.
-    }
-    return ledger.activeAccountId;
-  });
-  const activeAccount =
-    ledger.accounts.find((account) => account.id === selectedAccountId) ??
-    ledger.accounts[0];
+  const {
+    ledger,
+    activeAccount,
+    syncError,
+    selectAccount,
+    completeCharge,
+    completeTransfer,
+    resetDemoData: resetLedger,
+  } = useDemoLedger();
   const balance = activeAccount.balance;
   const balanceDigits = balance.toString().length;
   const balanceSizeClass =
@@ -428,36 +171,8 @@ function App() {
   const modalRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const syncFromStorage = (event: StorageEvent) => {
-      if (event.key !== LEDGER_STORAGE_KEY && event.key !== null) return;
-      try {
-        setLedger(readLedgerForCommit());
-      } catch {
-        setToast("ほかのタブのデモデータを読み込めませんでした");
-      }
-    };
-    window.addEventListener("storage", syncFromStorage);
-    return () => window.removeEventListener("storage", syncFromStorage);
-  }, []);
-
-  const commitLedger = async <T,>(
-    mutate: (latest: DemoLedger) => { next: DemoLedger; result: T } | null,
-  ): Promise<T | null> => {
-    if (!navigator.locks) {
-      throw new Error("このブラウザーでは安全にデモデータを保存できません。");
-    }
-    return navigator.locks.request(LEDGER_STORAGE_KEY, { mode: "exclusive" }, () => {
-      const latest = readLedgerForCommit();
-      const change = mutate(latest);
-      if (!change) {
-        setLedger(latest);
-        return null;
-      }
-      window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(change.next));
-      setLedger(change.next);
-      return change.result;
-    });
-  };
+    if (syncError) setToast(syncError.message);
+  }, [syncError]);
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
@@ -528,163 +243,14 @@ function App() {
     setActiveTab("pay");
     window.scrollTo(0, 0);
   };
-  const completeCharge = async (outcome: ChargeOutcome): Promise<ChargeOutcome | null> => {
-    const accountId = activeAccount.id;
-    return commitLedger((latest) => {
-      const account = latest.accounts.find((item) => item.id === accountId);
-      if (!account || account.transactions.some((item) => item.id === outcome.transactionId))
-        return null;
-      const charge: ChargeOutcome = {
-        ...outcome,
-        balanceAfter: account.balance + outcome.amount,
-      };
-      const date = new Intl.DateTimeFormat("ja-JP", {
-        timeZone: "Asia/Tokyo",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(outcome.completedAt));
-      return {
-        next: {
-          ...latest,
-          accounts: latest.accounts.map((item) =>
-            item.id === accountId
-              ? {
-                  ...item,
-                  balance: charge.balanceAfter,
-                  transactions: [
-                    {
-                      id: outcome.transactionId,
-                      title: "現金チャージ（デモ）",
-                      date,
-                      amount: outcome.amount,
-                      kind: "charge" as const,
-                      charge,
-                    },
-                    ...item.transactions,
-                  ],
-                }
-              : item,
-          ),
-        },
-        result: charge,
-      };
-    });
-  };
-
-  const completeTransfer = (
-    recipientId: string,
-    amount: bigint,
-    message: string,
-  ): Promise<SendReceipt | null> => {
-    const senderId = activeAccount.id;
-    return commitLedger((latest) => {
-      const sender = latest.accounts.find((account) => account.id === senderId);
-      const recipient = latest.accounts.find((account) => account.id === recipientId);
-      if (
-        !sender ||
-        !recipient ||
-        recipientId === senderId ||
-        amount <= 0n ||
-        amount > sender.balance ||
-        message.length > 50
-      ) return null;
-
-      const completedAt = new Date().toISOString();
-      const date = new Intl.DateTimeFormat("ja-JP", {
-        timeZone: "Asia/Tokyo",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(completedAt));
-      const transactionId = `DEMO-TRF-${
-        typeof window.crypto?.randomUUID === "function"
-          ? window.crypto.randomUUID()
-          : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-      }`;
-      const transferFromSender = {
-        counterpartyId: recipient.id,
-        counterpartyName: recipient.name,
-        message,
-        completedAt,
-      };
-      const transferToRecipient = {
-        counterpartyId: sender.id,
-        counterpartyName: sender.name,
-        message,
-        completedAt,
-      };
-      const balanceAfter = sender.balance - amount;
-      return {
-        next: {
-          ...latest,
-          accounts: latest.accounts.map((account) => {
-            if (account.id === senderId) {
-              return {
-                ...account,
-                balance: balanceAfter,
-                transactions: [
-                  {
-                    id: transactionId,
-                    title: `${recipient.name}さんへ送金`,
-                    date,
-                    amount: -amount,
-                    kind: "transfer_sent" as const,
-                    transfer: transferFromSender,
-                  },
-                  ...account.transactions,
-                ],
-              };
-            }
-            if (account.id === recipientId) {
-              return {
-                ...account,
-                balance: account.balance + amount,
-                transactions: [
-                  {
-                    id: transactionId,
-                    title: `${sender.name}さんから受け取り`,
-                    date,
-                    amount,
-                    kind: "transfer_received" as const,
-                    transfer: transferToRecipient,
-                  },
-                  ...account.transactions,
-                ],
-              };
-            }
-            return account;
-          }),
-        },
-        result: {
-          transactionId,
-          recipientName: recipient.name,
-          amount,
-          completedAt,
-          balanceAfter,
-        },
-      };
-    });
-  };
-
   const resetDemoData = async () => {
     try {
-      if (!navigator.locks) throw new Error("Web Locks are unavailable");
-      await navigator.locks.request(LEDGER_STORAGE_KEY, { mode: "exclusive" }, () => {
-        window.localStorage.setItem(LEDGER_STORAGE_KEY, stringifyMoney(initialLedger));
-        setLedger(initialLedger);
-      });
-      setSelectedAccountId("001");
-      try {
-        window.sessionStorage.removeItem("fespay-demo-selected-account-v1");
-      } catch {
-        // Selection still resets for this page.
-      }
+      await resetLedger();
       setToast("デモデータを初期化しました");
     } catch {
-      setToast("デモデータを初期化できませんでした。ブラウザーの保存設定を確認してください");
+      setToast(
+        "デモデータを初期化できませんでした。ブラウザーの保存設定を確認してください",
+      );
     }
     setModal(null);
   };
@@ -692,7 +258,9 @@ function App() {
   return (
     <div className="app-shell">
       <StatusBar />
-      <header className={`topbar${activeTab === "pay" ? " payment-topbar" : ""}`}>
+      <header
+        className={`topbar${activeTab === "pay" ? " payment-topbar" : ""}`}
+      >
         {activeTab === "pay" && (
           <button
             className="payment-close-button"
@@ -773,7 +341,10 @@ function App() {
                     </div>
                     <div className="balance-block">
                       <span>{activeAccount.name}の残高</span>
-                      <FittedBalance className={balanceSizeClass} value={yen(balance)} />
+                      <FittedBalance
+                        className={balanceSizeClass}
+                        value={yen(balance)}
+                      />
                     </div>
                     <div className="wallet-footer">
                       <span className="flip-pill">
@@ -791,7 +362,7 @@ function App() {
                     </div>
                     <div className="qr-content">
                       <QRCodeSVG
-                         value={DEMO_PAYMENT_QR_VALUE}
+                        value={DEMO_PAYMENT_QR_VALUE}
                         size={132}
                         level="M"
                         marginSize={4}
@@ -985,7 +556,10 @@ function App() {
 
       {activeTab === "pay" && (
         <main className="payment-content">
-          <section className="payment-qr-panel" aria-labelledby="payment-qr-heading">
+          <section
+            className="payment-qr-panel"
+            aria-labelledby="payment-qr-heading"
+          >
             <div className="payment-qr-panel-top">
               <h1 id="payment-qr-heading">支払い用QR</h1>
               <span className="payment-demo-tag">DEMO</span>
@@ -1005,9 +579,14 @@ function App() {
               />
             </div>
             <p>お店のスタッフに、このQRを見せてください。</p>
-            <span className="payment-qr-caption">読み取りやすいように画面を明るくしてください</span>
+            <span className="payment-qr-caption">
+              読み取りやすいように画面を明るくしてください
+            </span>
           </section>
-          <section className={`payment-balance${balanceSizeClass ? " is-expanded" : ""}`} aria-label="現在の残高">
+          <section
+            className={`payment-balance${balanceSizeClass ? " is-expanded" : ""}`}
+            aria-label="現在の残高"
+          >
             <span>
               <span>現在の残高</span>
               <small>{EVENT_NAME}</small>
@@ -1056,7 +635,10 @@ function App() {
             <FittedBalance className={balanceSizeClass} value={yen(balance)} />
             <small>デモデータはこのブラウザーに保存されます</small>
           </div>
-          <section className="content-card demo-accounts" aria-label="デモアカウントの切り替え">
+          <section
+            className="content-card demo-accounts"
+            aria-label="デモアカウントの切り替え"
+          >
             <h2>デモアカウントを切り替える</h2>
             <p>送金先の残高と受取履歴を、このブラウザーで確認できます。</p>
             <div className="demo-account-list">
@@ -1066,23 +648,26 @@ function App() {
                   type="button"
                   aria-pressed={account.id === activeAccount.id}
                   onClick={() => {
-                    setSelectedAccountId(account.id);
-                    try {
-                      window.sessionStorage.setItem("fespay-demo-selected-account-v1", account.id);
-                    } catch {
-                      // Account selection still works until this page is closed.
-                    }
+                    selectAccount(account.id);
                     setActiveTab("home");
                     setFlipped(false);
                     setToast(`${account.name}に切り替えました`);
                   }}
                 >
-                  <span className="demo-account-avatar"><UserRound size={18} /></span>
+                  <span className="demo-account-avatar">
+                    <UserRound size={18} />
+                  </span>
                   <span className="demo-account-copy">
                     <strong>{account.name}</strong>
-                    <small>ID {account.id} · {yen(account.balance)}</small>
+                    <small>
+                      ID {account.id} · {yen(account.balance)}
+                    </small>
                   </span>
-                  {account.id === activeAccount.id ? <Check size={19} /> : <ChevronRight size={18} />}
+                  {account.id === activeAccount.id ? (
+                    <Check size={19} />
+                  ) : (
+                    <ChevronRight size={18} />
+                  )}
                 </button>
               ))}
             </div>
@@ -1283,15 +868,14 @@ function App() {
                   <Info size={25} />
                 </span>
                 <h2>デモデータを初期化</h2>
-                <p>このブラウザーに保存したデモ残高と取引履歴を最初の状態に戻します。</p>
+                <p>
+                  このブラウザーに保存したデモ残高と取引履歴を最初の状態に戻します。
+                </p>
                 <div className="reset-actions">
                   <button type="button" onClick={() => setModal(null)}>
                     やめる
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void resetDemoData()}
-                  >
+                  <button type="button" onClick={() => void resetDemoData()}>
                     初期化する
                   </button>
                 </div>

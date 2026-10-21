@@ -1,28 +1,23 @@
 import { useState } from "react";
-import { ArrowDownLeft, ChevronDown, Plus, ReceiptText, Search, Send, UtensilsCrossed, X } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ChevronDown,
+  Plus,
+  ReceiptText,
+  Search,
+  Send,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { formatYen } from "./money";
+import type { Transaction } from "./domain/ledger";
 import "./history-view.css";
 
-type HistoryTransaction = {
-  id: string;
-  title: string;
-  date: string;
-  amount: bigint;
-  kind: "payment" | "charge" | "transfer_sent" | "transfer_received";
-  charge?: { completedAt?: string };
-  transfer?: {
-    counterpartyId: string;
-    counterpartyName: string;
-    message: string;
-    completedAt: string;
-  };
-};
-
 type HistoryViewProps = {
-  transactions: HistoryTransaction[];
+  transactions: Transaction[];
 };
 
-type Filter = "all" | HistoryTransaction["kind"];
+type Filter = "all" | Transaction["kind"];
 
 const filters: { value: Filter; label: string }[] = [
   { value: "all", label: "すべて" },
@@ -32,7 +27,7 @@ const filters: { value: Filter; label: string }[] = [
   { value: "transfer_received", label: "受け取り" },
 ];
 
-const kindLabel = (kind: HistoryTransaction["kind"]) =>
+const kindLabel = (kind: Transaction["kind"]) =>
   filters.find((filter) => filter.value === kind)?.label ?? "取引";
 
 const formatAmount = (amount: bigint) =>
@@ -49,10 +44,16 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
     (transaction) =>
       (filter === "all" || transaction.kind === filter) &&
       (!normalizedQuery ||
-        transaction.title.toLocaleLowerCase("ja-JP").includes(normalizedQuery) ||
+        transaction.title
+          .toLocaleLowerCase("ja-JP")
+          .includes(normalizedQuery) ||
         transaction.id.toLocaleLowerCase("ja-JP").includes(normalizedQuery) ||
-        transaction.transfer?.counterpartyId.toLocaleLowerCase("ja-JP").includes(normalizedQuery) ||
-        transaction.transfer?.message.toLocaleLowerCase("ja-JP").includes(normalizedQuery)),
+        transaction.transfer?.counterpartyId
+          .toLocaleLowerCase("ja-JP")
+          .includes(normalizedQuery) ||
+        transaction.transfer?.message
+          .toLocaleLowerCase("ja-JP")
+          .includes(normalizedQuery)),
   );
 
   const resetFilters = () => {
@@ -65,13 +66,21 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
       <div className="subpage-header">
         <span className="eyebrow">ACTIVITY</span>
         <h1>利用履歴</h1>
-        <p>この履歴はブラウザー内のデモデータです。実際の決済記録ではありません。</p>
+        <p>
+          この履歴はブラウザー内のデモデータです。実際の決済記録ではありません。
+        </p>
       </div>
 
-      <section className="content-card history-view-card" aria-label="利用履歴の検索と一覧">
+      <section
+        className="content-card history-view-card"
+        aria-label="利用履歴の検索と一覧"
+      >
         <div className="history-search">
           <Search size={18} aria-hidden="true" />
-          <label className="history-visually-hidden" htmlFor="history-search-input">
+          <label
+            className="history-visually-hidden"
+            htmlFor="history-search-input"
+          >
             相手・店舗名・取引IDで検索
           </label>
           <input
@@ -92,7 +101,11 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
           )}
         </div>
 
-        <div className="history-filters" role="group" aria-label="取引の種類で絞り込み">
+        <div
+          className="history-filters"
+          role="group"
+          aria-label="取引の種類で絞り込み"
+        >
           {filters.map(({ value, label }) => (
             <button
               key={value}
@@ -118,7 +131,10 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                 key={transaction.id}
               >
                 <summary>
-                  <span className={`history-entry-icon ${transaction.kind}`} aria-hidden="true">
+                  <span
+                    className={`history-entry-icon ${transaction.kind}`}
+                    aria-hidden="true"
+                  >
                     {transaction.kind === "charge" ? (
                       <Plus size={22} strokeWidth={2.5} />
                     ) : transaction.kind === "transfer_sent" ? (
@@ -131,12 +147,20 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                   </span>
                   <span className="history-entry-main">
                     <strong>{transaction.title}</strong>
-                    <small>{transaction.date} · {kindLabel(transaction.kind)}</small>
+                    <small>
+                      {transaction.date} · {kindLabel(transaction.kind)}
+                    </small>
                   </span>
-                  <span className={`history-entry-amount ${transaction.amount >= 0n ? "positive" : ""}`}>
+                  <span
+                    className={`history-entry-amount ${transaction.amount >= 0n ? "positive" : ""}`}
+                  >
                     {formatAmount(transaction.amount)}
                   </span>
-                  <ChevronDown className="history-entry-chevron" size={17} aria-hidden="true" />
+                  <ChevronDown
+                    className="history-entry-chevron"
+                    size={17}
+                    aria-hidden="true"
+                  />
                 </summary>
                 <dl className="history-entry-details">
                   <div>
@@ -144,7 +168,11 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                     <dd>{kindLabel(transaction.kind)}</dd>
                   </div>
                   <div>
-                    <dt>{transaction.kind === "charge" ? "チャージ名" : "店舗・相手先"}</dt>
+                    <dt>
+                      {transaction.kind === "charge"
+                        ? "チャージ名"
+                        : "店舗・相手先"}
+                    </dt>
                     <dd>{transaction.title}</dd>
                   </div>
                   {transaction.transfer && (
@@ -169,7 +197,11 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                   </div>
                   <div>
                     <dt>状態</dt>
-                    <dd>{transaction.charge || transaction.transfer ? "デモ操作完了" : "サンプルデータ"}</dd>
+                    <dd>
+                      {transaction.charge || transaction.transfer
+                        ? "デモ操作完了"
+                        : "サンプルデータ"}
+                    </dd>
                   </div>
                   <div>
                     <dt>取引ID</dt>
@@ -182,14 +214,20 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
         ) : (
           <div className="history-empty" role="status">
             <ReceiptText size={26} aria-hidden="true" />
-            <strong>{transactions.length === 0 ? "取引履歴はまだありません" : "該当する取引がありません"}</strong>
+            <strong>
+              {transactions.length === 0
+                ? "取引履歴はまだありません"
+                : "該当する取引がありません"}
+            </strong>
             <p>
               {transactions.length === 0
                 ? "デモで取引を行うと、ここに表示されます。"
                 : "検索語や絞り込みを変えてお試しください。"}
             </p>
             {transactions.length > 0 && (query || filter !== "all") && (
-              <button type="button" onClick={resetFilters}>絞り込みを解除</button>
+              <button type="button" onClick={resetFilters}>
+                絞り込みを解除
+              </button>
             )}
           </div>
         )}
