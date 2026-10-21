@@ -1,40 +1,15 @@
-.charge-flow-overlay,
-.charge-flow-overlay * {
-  box-sizing: border-box;
-}
-
 .charge-flow-overlay {
-  position: fixed;
-  inset: 0;
   z-index: 100;
-  display: flex;
-  justify-content: center;
-  background: #102957a6;
-  font-family: inherit;
-  color: #1b3153;
 }
 
 .charge-flow {
-  width: min(100%, 460px);
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
   background: linear-gradient(180deg, #f4faff 0%, #fff 44%);
-  box-shadow: 0 18px 60px #0c234a45;
 }
 
 .charge-flow__header {
-  flex: none;
   min-height: 58px;
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  gap: 7px;
   padding: 5px 15px;
   background: #fff9;
-  border-bottom: 1px solid #e5edf7;
 }
 
 .charge-flow__header-title {
@@ -44,35 +19,14 @@
   letter-spacing: 0.025em;
 }
 
-.charge-flow__icon-button {
-  min-width: 44px;
-  min-height: 44px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 13px;
-  background: #edf5fd;
-  color: #35577f;
-  cursor: pointer;
-}
-
 .charge-flow__icon-button:disabled {
   opacity: 0;
   pointer-events: none;
 }
 
 .charge-flow__progress {
-  flex: none;
-  display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 5px;
-  padding: 13px 23px 0;
-}
-
-.charge-flow__progress-bar {
-  height: 5px;
-  border-radius: 10px;
-  background: #dbe8f7;
 }
 
 .charge-flow__progress-bar.is-current {
@@ -80,12 +34,7 @@
 }
 
 .charge-flow__scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   padding: 22px 22px 28px;
-  scrollbar-width: thin;
 }
 
 .charge-flow__intro {
@@ -620,45 +569,9 @@
   letter-spacing: 0.02em;
 }
 
-.charge-flow__footer {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 12px 22px max(13px, env(safe-area-inset-bottom));
-  border-top: 1px solid #e5edf5;
-  background: #fffffff2;
-  box-shadow: 0 -7px 22px #244e8010;
-}
-
-.charge-flow__primary {
-  width: 100%;
-  min-height: 52px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 14px;
-  background: linear-gradient(95deg, #277fdf, #3c6de7);
-  box-shadow: 0 8px 18px #3579da35;
-  color: white;
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
 .charge-flow__confirm {
   background: linear-gradient(95deg, #159caa, #228dbf);
   box-shadow: 0 8px 18px #188eac32;
-}
-
-.charge-flow__primary:disabled {
-  background: #c9d6e4;
-  box-shadow: none;
-  color: #f8fbff;
-  cursor: not-allowed;
 }
 
 .charge-flow__secondary {
@@ -669,12 +582,6 @@
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
-}
-
-.charge-flow button:focus-visible,
-.charge-flow input:focus-visible {
-  outline: 3px solid #ffb84e;
-  outline-offset: 2px;
 }
 
 @media (max-width: 360px) {
