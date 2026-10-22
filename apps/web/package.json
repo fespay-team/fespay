@@ -2,7 +2,11 @@
   "name": "@fespay/web",
   "private": true,
   "type": "module",
-  "scripts": {"typecheck": "tsc --noEmit", "build": "vite build"},
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "test:management": "tsx --test src/features/management/tests/*.test.ts"
+  },
   "dependencies": {"react": "19.3.0", "react-dom": "19.3.0"},
   "devDependencies": {"@vitejs/plugin-react": "6.1.2", "vite": "8.3.4"}
 }
