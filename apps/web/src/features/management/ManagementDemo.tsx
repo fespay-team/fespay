@@ -51,7 +51,6 @@ function ManagementWorkspace({ adapter, accountId, settingsWorkspace }: { adapte
   const load = useCallback((signal: AbortSignal) => loadBootstrap(adapter, signal), [adapter]);
   const bootstrap = useManagementRead(`events:${retry}`, load);
   const events = useMemo(() => bootstrap.status === 'ready' ? bootstrap.data.events.map(event => guideOverrides[event.event_id] ?? event) : [], [bootstrap, guideOverrides]);
-  const displayOwnedEvents = useMemo(() => bootstrap.status === 'ready' ? bootstrap.data.ownedEvents.map(event => guideOverrides[event.event_id] ?? event) : [], [bootstrap, guideOverrides]);
   const event = events.find(e => e.event_id === selection.eventId) ?? events[0];
   const selectEvent = (id: string) => { if (events.some(e => e.event_id === id)) setSelection(changeEvent(id)); };
   if (bootstrap.status !== 'ready' || !event) return <ManagementLayout navigation={[]} activeId="context" onNavigate={() => {}}
@@ -59,14 +58,13 @@ function ManagementWorkspace({ adapter, accountId, settingsWorkspace }: { adapte
     {bootstrap.status === 'loading' ? <LoadingState /> : bootstrap.status === 'error' ? <ErrorState error={bootstrap.error} onRetry={() => setRetry(n => n + 1)} /> :
       <EmptyState title="管理できるイベントがありません">現在の所有・active grantに対応するイベントがありません。主催者ホームや業務集計は表示しません。</EmptyState>}
   </ManagementLayout>;
-  return <SelectedEventWorkspace adapter={adapter} accountId={accountId} events={events} event={event} ownedEvents={bootstrap.data.ownedEvents} displayOwnedEvents={displayOwnedEvents} settingsWorkspace={settingsWorkspace} onGuideSaved={onGuideSaved}
+  return <SelectedEventWorkspace adapter={adapter} accountId={accountId} events={events} event={event} ownedEvents={bootstrap.data.ownedEvents} settingsWorkspace={settingsWorkspace} onGuideSaved={onGuideSaved}
     shopId={selection.shopId} onEventChange={selectEvent} onShopChange={shopId => setSelection({ eventId: event.event_id, shopId })} />;
 }
-function SelectedEventWorkspace({ adapter, accountId, events, event, ownedEvents, displayOwnedEvents, shopId, onEventChange, onShopChange, settingsWorkspace, onGuideSaved }: {
+function SelectedEventWorkspace({ adapter, accountId, events, event, ownedEvents, shopId, onEventChange, onShopChange, settingsWorkspace, onGuideSaved }: {
   adapter: ManagementAdapter; accountId: string; events: EventGuide[]; event: EventGuide; ownedEvents: EventGuide[];
   shopId: string | null; onEventChange: (id: string) => void; onShopChange: (id: string | null) => void;
   settingsWorkspace: SettingsWorkspace; onGuideSaved: (guide: EventGuide) => void;
-  displayOwnedEvents: EventGuide[];
 }) {
   const [retry, setRetry] = useState(0);
   const [page, setPage] = useState('M01');
@@ -84,7 +82,7 @@ function SelectedEventWorkspace({ adapter, accountId, events, event, ownedEvents
   }>
     {result.status === 'loading' ? <LoadingState /> : result.status === 'error' ? <ErrorState error={result.error} onRetry={() => setRetry(n => n + 1)} /> : <>
       <AuthoritySummary eventId={event.event_id} context={result.data} />
-      {activeId === 'M02' ? <EventSettingsPage key={event.event_id} event={event} authority={result.data.authority} workspace={settingsWorkspace} onGuideSaved={onGuideSaved} /> : activeId === 'M01' ? <OrganizerHome event={event} context={result.data} shopId={selectedShopId} ownedEvents={displayOwnedEvents} onEventChange={onEventChange} /> : <>
+      {activeId === 'M02' ? <EventSettingsPage key={event.event_id} event={event} authority={result.data.authority} workspace={settingsWorkspace} onGuideSaved={onGuideSaved} /> : activeId === 'M01' ? <OrganizerHome event={event} context={result.data} shopId={selectedShopId} /> : <>
         <div className="mg-page-heading"><div><p className="mg-eyebrow">MANAGEMENT CONTEXT</p><h1>選択中の管理対象</h1><p className="mg-event-name">{event.name}</p></div></div>
         <section className="mg-panel"><h2>現在の表示資格に対応するナビゲーション</h2><p>権限外の管理導線と主催者用の主要指標は表示しません。業務画面は後続の実装で追加します。</p></section>
         <ShopStatusList shops={shops} suspensions={result.data.suspensions} shopId={selectedShopId} />

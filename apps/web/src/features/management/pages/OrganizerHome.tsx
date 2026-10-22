@@ -4,9 +4,10 @@ import { eventLifecycleLabels, formatCheckedAt, formatYen, organizerHomeModel } 
 import { Badge } from '../components/Status';
 import { Icon } from '../components/Icon';
 import { ShopStatusList } from '../components/ShopStatusList';
+import { ShopStatusSummary } from '../components/ShopStatusSummary';
 
-export function OrganizerHome({ event, context, shopId, ownedEvents, onEventChange }: {
-  event: EventGuide; context: EventContext; shopId: string | null; ownedEvents: EventGuide[]; onEventChange: (id: string) => void;
+export function OrganizerHome({ event, context, shopId }: {
+  event: EventGuide; context: EventContext; shopId: string | null;
 }) {
   if (!context.dashboard || !context.reconciliation) return null;
   const view = organizerHomeModel(event.event_id, context.dashboard, context.reconciliation);
@@ -24,16 +25,14 @@ export function OrganizerHome({ event, context, shopId, ownedEvents, onEventChan
         <Badge tone={view.unresolvedCashCases > 0 ? 'warning' : 'neutral'}>{view.unresolvedCashCases > 0 ? '未解決ケースあり' : '未解決ケースなし'}</Badge>
         <p className="mg-note">ケースの処理操作は未実装です。</p><p className="mg-timestamp">正本確認：{formatCheckedAt(view.dashboardCheckedAt)}</p></article>
     </section>
+    <div className="mg-home-status">
     <section className="mg-panel" aria-labelledby="event-stop-title"><div className="mg-section-heading"><div><span className="mg-eyebrow">EVENT</span><h2 id="event-stop-title">イベントの緊急停止</h2></div><Badge tone={activeEventStops.length ? 'warning' : 'neutral'}>{activeEventStops.length ? '有効な停止あり' : '有効な停止なし'}</Badge></div>
       {activeEventStops.map(stop => <p key={stop.suspension_id}>{stop.reason}</p>)}
       <p className="mg-muted">店舗単位の緊急停止とは別の状態です。精算中であることから精算専用再開の実施状態は判定しません。</p>
     </section>
-    <ShopStatusList shops={context.shops} suspensions={context.suspensions} shopId={shopId} />
-    <section className="mg-panel" aria-labelledby="owned-events-title"><div className="mg-section-heading"><div><span className="mg-eyebrow">YOUR EVENTS</span><h2 id="owned-events-title">自イベント</h2></div></div>
-      <ul className="mg-event-list">{ownedEvents.map(item => <li key={item.event_id}><button className="mg-event-button" onClick={() => onEventChange(item.event_id)} aria-current={item.event_id === event.event_id ? 'true' : undefined}>
-        <span>{item.name}</span><Badge tone={item.event_id === event.event_id ? 'blue' : 'neutral'}>{eventLifecycleLabels[item.lifecycle]}</Badge>
-      </button></li>)}</ul>
-    </section>
-    <p className="mg-boundary-note">統一した「停止中店舗件数」は定義確認待ちのため表示していません。金額はfixtureによる表示確認で、実際の残高・売上ではありません。</p>
+    {shopId ? <ShopStatusList shops={context.shops} suspensions={context.suspensions} shopId={shopId} /> :
+      <ShopStatusSummary shops={context.shops} suspensions={context.suspensions} />}
+    </div>
+    <p className="mg-boundary-note">金額はfixtureによる表示確認で、実際の残高・売上ではありません。</p>
   </>;
 }

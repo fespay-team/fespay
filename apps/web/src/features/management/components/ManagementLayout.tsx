@@ -3,6 +3,8 @@ import type { NavigationItem } from '../model';
 import { Badge } from './Status';
 import { Icon } from './Icon';
 
+const fespayIconUrl = new URL('../assets/fespay-icon.png', import.meta.url).href;
+
 export function ManagementLayout({ navigation, activeId, onNavigate, selectors, children }: {
   navigation: NavigationItem[];
   activeId: string;
@@ -13,13 +15,13 @@ export function ManagementLayout({ navigation, activeId, onNavigate, selectors, 
   return <div className="mg-shell">
     <a className="mg-skip-link" href="#management-content">本文へ移動</a>
     <aside className="mg-sidebar">
-      <div className="mg-brand"><span className="mg-brand-mark" aria-hidden="true">F</span><div><strong>FesPay</strong><span>管理コンソール</span></div></div>
+      <div className="mg-brand"><img className="mg-brand-mark" src={fespayIconUrl} alt="" /><div><strong>FesPay</strong><span>管理コンソール</span></div></div>
       <p className="mg-nav-label">MANAGEMENT</p>
       <nav aria-label="管理ナビゲーション">
         {navigation.map(item => <button key={item.id} type="button" className="mg-nav-item" aria-current={activeId === item.id ? 'page' : undefined}
           disabled={!item.available} onClick={() => onNavigate(item.id)}>
           <Icon name={item.id === 'M01' ? 'home' : item.id === 'context' ? 'grid' : item.id === 'M10' ? 'chart' : 'shop'} />
-          <span>{item.label}</span>{!item.available && <small>未実装</small>}
+          <span className="mg-nav-item-text"><span>{item.label}</span>{!item.available && <small>未実装</small>}</span>
         </button>)}
         {navigation.length === 0 && <p className="mg-muted">管理対象の確認後に表示します。</p>}
       </nav>

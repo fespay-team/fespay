@@ -1,9 +1,10 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import type { EventGuide } from '../contracts';
 import { formatCheckedAt, ownsEvent, type DisplayAuthority } from '../model';
-import { guideDraft, settingsDraft, type GuideDraft, type SettingsDraft } from '../settingsModel';
+import { guideDraft, japanInput, settingsDraft, settingsWindows, utcFromJapan, type GuideDraft, type SettingsDraft, type WindowDraft } from '../settingsModel';
 import type { EventSettingsEditor, SettingsSectionState, SettingsWorkspace } from '../settingsState';
 import { SettingsContact, SettingsField, SettingsSelect, SettingsToggle, SettingsWindow } from '../components/SettingsFields';
+import { SettingsTabs } from '../components/SettingsTabs';
 import { Badge } from '../components/Status';
 
 const fieldLabels: Record<string, string> = {
@@ -14,14 +15,60 @@ const fieldLabels: Record<string, string> = {
   expiration_at: '残高失効日時', expiration_terms: '残高失効条件', features: '機能ポリシー', mobile_orders_enabled: 'モバイル注文の主催者許可',
 };
 const featureLabels = { amount_input: '金額入力', payment_a: 'A方式', payment_b: 'B方式', fixed_qr: '固定QR', products: '商品', inventory: '在庫', orders: '注文', mobile_orders: 'モバイル注文' } as const;
+const featureKeys = ['amount_input', 'payment_a', 'payment_b', 'fixed_qr', 'products', 'inventory', 'orders', 'mobile_orders'] as const;
 const displayValue = (value: unknown): string => typeof value === 'boolean' ? value ? '有効' : '無効' : typeof value === 'object' && value !== null
   ? Object.values(value).map(displayValue).join(' / ') : ({ PROHIBITED: '禁止', OPTIONAL: '任意', REQUIRED: '必須', PUBLIC: '公開', PASSWORD: 'パスワード' } as Record<string, string>)[String(value)] ?? String(value || '未指定').replace('T', ' ');
 
-function SaveStatus<R extends { version: string }, D extends object>({ state, controller, latestDraft }: {
+function conflictValue<D extends GuideDraft | SettingsDraft>(draft: D, key: string): unknown {
+  const date = (path: string, input: string) => {
+    const origin = draft.dateOrigins[path];
+    if (origin && input === origin.input) return origin.utc;
+    if (!input) return null;
+    try { return utcFromJapan(input); } catch { return input; }
+  };
+  if (key === 'features' && 'features' in draft) return Object.fromEntries(featureKeys.map(feature => [feature, draft.features[feature]]));
+  if (key === 'expiration_at' && 'expiration_at' in draft) return date(key, draft.expiration_at);
+  const value = draft[key as keyof D];
+  if (key === 'hosting_window' || settingsWindows.some(window => window === key)) {
+    const window = value as WindowDraft;
+    return { starts_at: date(`${key}.starts_at`, window.starts_at), ends_at: date(`${key}.ends_at`, window.ends_at) };
+  }
+  return value;
+}
+function conflictComparison<D extends GuideDraft | SettingsDraft>(draft: D, key: string): string | undefined {
+  const isDate = key === 'expiration_at' || key === 'hosting_window' || settingsWindows.some(window => window === key);
+  // Only comparison drops insignificant fractional zeroes; display and wire values stay intact.
+  return JSON.stringify(conflictValue(draft, key), (_field, value: unknown) => {
+    if (!isDate || typeof value !== 'string') return value;
+    return value.replace(/\.(\d+)Z$/, (_match, fraction: string) => {
+      const significant = fraction.replace(/0+$/, '');
+      return significant ? `.${significant}Z` : 'Z';
+    });
+  });
+}
+function displayConflictDate(value: string | null): string {
+  if (!value?.endsWith('Z')) return displayValue(value);
+  const fraction = /\.(\d+)Z$/.exec(value)?.[1];
+  return `${japanInput(value).slice(0, 19).replace('T', ' ')}${fraction ? `.${fraction}` : ''}（日本時間）`;
+}
+function displayConflictValue(key: string, value: unknown): string {
+  if (key === 'features') {
+    const features = value as SettingsDraft['features'];
+    return featureKeys.map(feature => `${featureLabels[feature]}：${displayValue(features[feature])}`).join(' / ');
+  }
+  if (key === 'expiration_at') return displayConflictDate(value as string | null);
+  if (key === 'hosting_window' || settingsWindows.some(window => window === key)) {
+    const window = value as WindowDraft;
+    return `開始日時：${displayConflictDate(window.starts_at)} / 終了日時：${displayConflictDate(window.ends_at)}`;
+  }
+  return displayValue(value);
+}
+
+export function SaveStatus<R extends { version: string }, D extends GuideDraft | SettingsDraft>({ state, controller, latestDraft }: {
   state: SettingsSectionState<R, D>; controller: { confirm: () => Promise<void>; refreshConflict: () => Promise<void>; acceptLatestVersion: () => void }; latestDraft?: D;
 }) {
   const statusLabel = ({ idle: '未保存', saving: '保存中', saved: '保存済み', pending: '確認中', conflict: '競合', error: 'エラー' })[state.status];
-  const changes = latestDraft && state.draft ? Object.keys(fieldLabels).filter(key => key in latestDraft && JSON.stringify(latestDraft[key as keyof D]) !== JSON.stringify(state.draft![key as keyof D])) : [];
+  const changes = latestDraft && state.draft ? Object.keys(fieldLabels).filter(key => key in latestDraft && conflictComparison(latestDraft, key) !== conflictComparison(state.draft!, key)) : [];
   return <div className="mg-settings-save-state">
     <div role={state.status === 'error' || state.status === 'conflict' ? 'alert' : 'status'} aria-live="polite"><Badge tone={['error', 'conflict', 'pending'].includes(state.status) ? 'warning' : 'blue'}>{statusLabel}</Badge><p>{state.message || 'この設定は個別に保存します。'}</p></div>
     {Object.keys(state.fields).length > 0 && <p className="mg-field-error">入力エラーのある項目を修正してください。</p>}
@@ -29,7 +76,7 @@ function SaveStatus<R extends { version: string }, D extends object>({ state, co
     {state.status === 'conflict' && <>
       <button type="button" className="mg-button" disabled={state.checking} onClick={() => void controller.refreshConflict()}>{state.checking ? '最新情報を確認中' : '最新情報を確認'}</button>
       {state.latest && <div className="mg-settings-conflict"><p>最新の版：{state.latest.version} ／ 編集の基準版：{state.resource?.version}</p>
-        {changes.length ? <dl>{changes.map(key => <div key={key}><dt>{fieldLabels[key]}</dt><dd>最新の正本：{displayValue(latestDraft![key as keyof D])}</dd><dd>編集中：{displayValue(state.draft![key as keyof D])}</dd></div>)}</dl> : <p>編集項目の差はありません。版の変更を確認してください。</p>}
+        {changes.length ? <dl>{changes.map(key => <div key={key}><dt>{fieldLabels[key]}</dt><dd>最新の正本：{displayConflictValue(key, conflictValue(latestDraft!, key))}</dd><dd>編集中：{displayConflictValue(key, conflictValue(state.draft!, key))}</dd></div>)}</dl> : <p>編集項目の差はありません。版の変更を確認してください。</p>}
         <p className="mg-note">
            最新版との差分を確認してください。続行すると編集中の内容を保持したまま最新の版を基準に再保存します。差分のある項目は、編集中の値で最新版を上書きします。
         </p>
@@ -38,7 +85,7 @@ function SaveStatus<R extends { version: string }, D extends object>({ state, co
     </>}
   </div>;
 }
-function EditorForm<R extends { version: string; checked_at: string }, D extends object>({ title, prefix, state, controller, children, latestDraft }: {
+function EditorForm<R extends { version: string; checked_at: string }, D extends GuideDraft | SettingsDraft>({ title, prefix, state, controller, children, latestDraft }: {
   title: string; prefix: string; state: SettingsSectionState<R, D>;
   controller: { load: () => Promise<void>; save: () => Promise<void>; confirm: () => Promise<void>; refreshConflict: () => Promise<void>; acceptLatestVersion: () => void };
   children: ReactNode; latestDraft?: D;
@@ -70,9 +117,13 @@ export function EventSettingsPage({ event, authority, workspace, onGuideSaved }:
   const editSettings = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => { if (settings) editor.settings.edit({ ...settings, [key]: value }); };
   return <div className="mg-settings">
     <div className="mg-page-heading"><div><p className="mg-eyebrow">EVENT SETTINGS / M02</p><h1>イベント設定</h1><p className="mg-event-name">{g.resource?.name ?? event.name}</p></div><Badge tone="purple">DEMO / fixture</Badge></div>
-    <div className="mg-scope-note"><p>案内設定と業務設定は別々に保存します。片方の保存は、もう片方の保存成功を意味しません。画面内の切替では編集中の内容と確認中の要求を保持します。再読込するとfixtureは初期化されます。</p></div>
-    <p className="mg-note">表示・入力日時は日本時間です。公開メールの所有確認、現在の所有権、追加認証、変更の保護条件はAPI側で最終確認します。実API・MFAは未統合です。</p>
-    <EditorForm title="案内設定" prefix="guide" state={g} controller={editor.guide} latestDraft={g.latest ? guideDraft(g.latest) : undefined}>
+    <p className="mg-note">案内設定と業務設定は別々に保存します。日時は日本時間です。</p>
+    <details className="mg-settings-dev-info">
+      <summary>開発確認情報</summary>
+      <p className="mg-note">片方の保存は、もう片方の保存成功を意味しません。画面内の切替では編集中の内容と確認中の要求を保持します。再読込するとfixtureは初期化されます。</p>
+      <p className="mg-note">公開メールの所有確認、現在の所有権、追加認証、変更の保護条件はAPI側で最終確認します。実API・MFAは未統合です。</p>
+    </details>
+    <SettingsTabs guide={<EditorForm title="案内設定" prefix="guide" state={g} controller={editor.guide} latestDraft={g.latest ? guideDraft(g.latest) : undefined}>
       {guide && <>
         <div className="mg-settings-grid">
           {(['name', 'organizer_name', 'venue'] as const).map(key => <SettingsField key={key} prefix="guide" field={key} label={fieldLabels[key]} value={guide[key]} onChange={value => editGuide(key, value)} errors={g.fields} help={`最大${key === 'venue' ? 200 : 100}文字`} />)}
@@ -84,8 +135,7 @@ export function EventSettingsPage({ event, authority, workspace, onGuideSaved }:
         <SettingsToggle prefix="guide" field="guide_public" label="イベント案内を公開する" value={guide.guide_public} onChange={value => editGuide('guide_public', value)} errors={g.fields} />
         <SettingsField prefix="guide" field="reason" label="案内設定の変更理由" value={guide.reason} onChange={value => editGuide('reason', value)} errors={g.fields} multiline help="空白以外を含む1〜1000文字。" />
       </>}
-    </EditorForm>
-    <EditorForm title="業務設定" prefix="settings" state={s} controller={editor.settings} latestDraft={s.latest ? settingsDraft(s.latest) : undefined}>
+    </EditorForm>} settings={<EditorForm title="業務設定" prefix="settings" state={s} controller={editor.settings} latestDraft={s.latest ? settingsDraft(s.latest) : undefined}>
       {settings && <>
         <dl className="mg-settings-meta"><div><dt>参加条件の版</dt><dd>{s.resource?.terms_version}</dd></div><div><dt>初回チャージ（日本時間）</dt><dd>{s.resource?.first_charge_at ? formatCheckedAt(s.resource.first_charge_at) : 'まだありません'}</dd></div></dl>
         {s.resource?.first_charge_at && <p className="mg-settings-protection">初回チャージ後です。払戻しOFF、受付期間短縮、失効の新設・前倒しなどはサーバーが拒否します。有利な変更にも理由と版が必要です。</p>}
@@ -113,6 +163,6 @@ export function EventSettingsPage({ event, authority, workspace, onGuideSaved }:
         <SettingsToggle prefix="settings" field="mobile_orders_enabled" label="主催者としてモバイル注文を許可する（店舗の許可と商品・注文機能も必要）" value={settings.mobile_orders_enabled} onChange={value => editSettings('mobile_orders_enabled', value)} errors={s.fields} />
         <SettingsField prefix="settings" field="reason" label="業務設定の変更理由" value={settings.reason} onChange={value => editSettings('reason', value)} errors={s.fields} multiline help="空白以外を含む1〜1000文字。" />
       </>}
-    </EditorForm>
+    </EditorForm>} />
   </div>;
 }
