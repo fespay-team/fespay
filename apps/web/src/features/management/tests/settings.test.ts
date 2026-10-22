@@ -85,8 +85,9 @@ test('password transitions reject missing SET/CLEAR and validate 8..64 Unicode c
 test('M02 display/edit is ownership based, and fixture rejects grants without ownership', async () => {
   for (const p of profiles) {
     const authority = { accountId: p.accountId, ownedEventIds: p.ownedEventIds, grants };
-    assert.equal(managementNavigation(authority, eventId, null).some(n => n.id === 'M02' && n.available), p.id === 'owner');
-    if (p.id !== 'owner') await assert.rejects(createSettingsFixture(p.id as ProfileId).adapter.updateEventGuide(eventId, updateGuideBody({ ...guideDraft(events[0]), reason: '更新' }, '1'), crypto.randomUUID(), signal()), (e: unknown) => e instanceof ManagementReadError && e.status === 403);
+    const owner = p.ownedEventIds.includes(eventId);
+    assert.equal(managementNavigation(authority, eventId, null).some(n => n.id === 'M02' && n.available), owner);
+    if (!owner) await assert.rejects(createSettingsFixture(p.id as ProfileId).adapter.updateEventGuide(eventId, updateGuideBody({ ...guideDraft(events[0]), reason: '更新' }, '1'), crypto.randomUUID(), signal()), (e: unknown) => e instanceof ManagementReadError && e.status === 403);
   }
   const fixture = createSettingsFixture('owner'); let writes = 0;
   const editor = createEventSettingsEditor({ ...fixture.adapter, updateEventGuide: async (...args) => { writes++; return fixture.adapter.updateEventGuide(...args); } }, eventId, () => false);

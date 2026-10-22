@@ -35,7 +35,7 @@ export const suspensions: Suspension[] = [
   { suspension_id: id(3, 2), event_id: eventIds[0], scope: 'SHOP', shop_id: shopIds[1], active: false, reason: 'デモ：解除済みの店舗停止', version: '2', checked_at: checkedAt },
   { suspension_id: id(3, 3), event_id: eventIds[1], scope: 'EVENT', active: true, reason: 'デモ：イベントの緊急停止を確認', version: '1', checked_at: checkedAt },
 ];
-export type ProfileId = 'owner' | 'operator' | 'manager' | 'cashier' | 'report-cashier' | 'revoked';
+export type ProfileId = 'owner' | 'operator' | 'manager' | 'cashier' | 'report-cashier' | 'revoked' | 'owner-staff';
 // Fixture metadata is outside all wire DTOs. Ownership is supplied by OWNED pages.
 export const profiles: { id: ProfileId; label: string; accountId: string; ownedEventIds: string[] }[] = [
   { id: 'owner', label: '主催者（grantも兼務）', accountId: id(4, 1), ownedEventIds: eventIds },
@@ -44,6 +44,7 @@ export const profiles: { id: ProfileId; label: string; accountId: string; ownedE
   { id: 'cashier', label: 'レジ担当（集計権限なし）', accountId: id(4, 4), ownedEventIds: [] },
   { id: 'report-cashier', label: 'レジ担当（自店舗の集計権限あり）', accountId: id(4, 5), ownedEventIds: [] },
   { id: 'revoked', label: '権限解除済み', accountId: id(4, 6), ownedEventIds: [] },
+  { id: 'owner-staff', label: '主催＋担当兼務', accountId: id(4, 7), ownedEventIds: [eventIds[0]] },
 ];
 const grant = (n: number, profile: number, event: number, scope: GrantScope, active = true): Grant => ({
   grant_id: id(5, n), account_id: profiles[profile].accountId, event_id: eventIds[event], scope, active, version: '1', checked_at: checkedAt,
@@ -57,6 +58,8 @@ export const grants: Grant[] = [
   grant(6, 3, 0, { role: 'CASHIER', shop_id: shopIds[0], register_ids: [id(6, 1)], permissions: ['CREATE_PAYMENT_REQUEST'] }),
   grant(7, 4, 0, { role: 'CASHIER', shop_id: shopIds[0], register_ids: [id(6, 2)], permissions: ['CREATE_PAYMENT_REQUEST', 'READ_REPORT'] }),
   grant(8, 5, 0, { role: 'EVENT_OPERATOR', permissions: ['READ_REPORT', 'READ_AUDIT'] }, false),
+  grant(9, 6, 0, { role: 'CASHIER', shop_id: shopIds[0], register_ids: [id(6, 1)], permissions: ['CREATE_PAYMENT_REQUEST'] }),
+  grant(10, 6, 1, { role: 'EVENT_OPERATOR', permissions: ['READ_REPORT'] }),
 ];
 export type ScenarioId = 'normal' | 'long-values' | 'zero' | 'negative' | 'empty-events' | 'empty-shops' | 'error' | 'slow';
 export const scenarios: { id: ScenarioId; label: string }[] = [

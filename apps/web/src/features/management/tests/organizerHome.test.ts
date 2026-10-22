@@ -99,7 +99,7 @@ test('M01 removes its owned-event switcher and preserves financial indicators an
 test('the shared event selector still changes the event, clears the shop and rejects the previous event shop ID', () => {
   const first = context(), second = context(eventIds[1]);
   let selection: ManagementSelection = { eventId: eventIds[0], shopId: first.shops[0].shop_id };
-  const selectors = ContextSelectors({ events, eventId: selection.eventId, shops: first.shops, shopId: selection.shopId, loading: false,
+  const selectors = ContextSelectors({ events, ownedEventIds: first.authority.ownedEventIds, eventId: selection.eventId, shops: first.shops, shopId: selection.shopId, loading: false,
     onEventChange: id => { selection = changeEvent(id); }, onShopChange: id => { selection = { ...selection, shopId: id }; },
   });
   const eventSelect = elements(selectors).find(element => element.props.id === 'management-event')!;

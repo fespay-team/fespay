@@ -54,7 +54,7 @@ function ManagementWorkspace({ adapter, accountId, settingsWorkspace }: { adapte
   const event = events.find(e => e.event_id === selection.eventId) ?? events[0];
   const selectEvent = (id: string) => { if (events.some(e => e.event_id === id)) setSelection(changeEvent(id)); };
   if (bootstrap.status !== 'ready' || !event) return <ManagementLayout navigation={[]} activeId="context" onNavigate={() => {}}
-    selectors={<ContextSelectors events={events} eventId={null} shops={[]} shopId={null} loading={bootstrap.status === 'loading'} onEventChange={selectEvent} onShopChange={() => {}} />}>
+    selectors={<ContextSelectors events={events} ownedEventIds={[]} eventId={null} shops={[]} shopId={null} loading={bootstrap.status === 'loading'} onEventChange={selectEvent} onShopChange={() => {}} />}>
     {bootstrap.status === 'loading' ? <LoadingState /> : bootstrap.status === 'error' ? <ErrorState error={bootstrap.error} onRetry={() => setRetry(n => n + 1)} /> :
       <EmptyState title="管理できるイベントがありません">現在の所有・active grantに対応するイベントがありません。主催者ホームや業務集計は表示しません。</EmptyState>}
   </ManagementLayout>;
@@ -77,7 +77,7 @@ function SelectedEventWorkspace({ adapter, accountId, events, event, ownedEvents
   const activeId = owner && (page === 'M01' || page === 'M02') ? page : 'context';
   const navigation = context ? managementNavigation(context.authority, event.event_id, selectedShopId) : [];
   return <ManagementLayout navigation={navigation} activeId={activeId} onNavigate={setPage} selectors={
-    <ContextSelectors events={events} eventId={event.event_id} shops={shops} shopId={selectedShopId} loading={result.status === 'loading'}
+    <ContextSelectors events={events} ownedEventIds={ownedEvents.map(e => e.event_id)} eventId={event.event_id} shops={shops} shopId={selectedShopId} loading={result.status === 'loading'}
       onEventChange={onEventChange} onShopChange={id => onShopChange(validShopId(event.event_id, id, shops))} />
   }>
     {result.status === 'loading' ? <LoadingState /> : result.status === 'error' ? <ErrorState error={result.error} onRetry={() => setRetry(n => n + 1)} /> : <>

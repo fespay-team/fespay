@@ -1,7 +1,8 @@
 import type { EventGuide, Shop } from '../contracts';
 
-export function ContextSelectors({ events, eventId, shops, shopId, loading, onEventChange, onShopChange }: {
+export function ContextSelectors({ events, ownedEventIds, eventId, shops, shopId, loading, onEventChange, onShopChange }: {
   events: EventGuide[];
+  ownedEventIds: readonly string[];
   eventId: string | null;
   shops: Shop[];
   shopId: string | null;
@@ -10,14 +11,21 @@ export function ContextSelectors({ events, eventId, shops, shopId, loading, onEv
   onShopChange: (id: string | null) => void;
 }) {
   const event = events.find(e => e.event_id === eventId);
+  const ownedIds = new Set(ownedEventIds);
+  const eventGroups = [
+    { label: '主催イベント', events: events.filter(e => ownedIds.has(e.event_id)) },
+    { label: '担当イベント', events: events.filter(e => !ownedIds.has(e.event_id)) },
+  ];
   const shop = shops.find(s => s.shop_id === shopId);
   return <div className="mg-selectors">
     <div className="mg-field"><label htmlFor="management-event">イベント</label>
-      <select id="management-event" value={eventId ?? ''} disabled={events.length === 0} onChange={e => onEventChange(e.target.value)}>
+      <select id="management-event" aria-describedby="management-event-selection" value={eventId ?? ''} disabled={events.length === 0} onChange={e => onEventChange(e.target.value)}>
         {events.length === 0 && <option value="">選択できるイベントなし</option>}
-        {events.map(e => <option key={e.event_id} value={e.event_id}>{e.name}</option>)}
+        {eventGroups.filter(group => group.events.length > 0).map(group => <optgroup key={group.label} label={group.label}>
+          {group.events.map(e => <option key={e.event_id} value={e.event_id}>{e.name}</option>)}
+        </optgroup>)}
       </select>
-      <p className="mg-selection-name">{event?.name ?? 'イベント未選択'}</p>
+      <p id="management-event-selection" className="mg-selection-name">{event ? `${ownedIds.has(event.event_id) ? '主催イベント' : '担当イベント'}：${event.name}` : 'イベント未選択'}</p>
     </div>
     <div className="mg-field"><label htmlFor="management-shop">店舗</label>
       <select id="management-shop" value={shopId ?? ''} disabled={loading || shops.length === 0} onChange={e => onShopChange(e.target.value || null)}>
