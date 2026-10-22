@@ -5,6 +5,8 @@ import type { Config } from './config.js';
 import type { createAuth } from './auth.js';
 import { ApiError, readJson } from './http-input.js';
 import { listIdentities } from './identity-list.js';
+import { createChargeApi } from './charge-api.js';
+import { createWalletApi } from './wallet-api.js';
 import {
   cookie,
   csrf,
@@ -450,5 +452,19 @@ export function createSessionApi(config: Config, auth: ReturnType<typeof createA
     if (!result) throw unauthorized();
     return result;
   });
+  router.route('/', createChargeApi({
+    withActor,
+    config,
+    codec,
+    sessionCookie,
+    requestId: (request) => requestIds.get(request) ?? randomUUID(),
+  }));
+  router.route('/', createWalletApi({
+    withActor,
+    config,
+    codec,
+    sessionCookie,
+    requestId: (request) => requestIds.get(request) ?? randomUUID(),
+  }));
   return router;
 }
